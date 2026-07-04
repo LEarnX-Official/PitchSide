@@ -14,7 +14,7 @@ export class AiPanel {
    * @param {HTMLElement} refs.answer
    * @param {HTMLElement} refs.status
    */
-  constructor ({ input, ask, answer, status }) {
+  constructor({ input, ask, answer, status }) {
     this.input = input
     this.ask = ask
     this.answer = answer
@@ -28,13 +28,17 @@ export class AiPanel {
       this.input.value = ''
     }
     this.ask.addEventListener('click', submit)
-    this.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit() })
+    this.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit()
+    })
   }
 
-  onAsk (fn) { this._onAsk = fn }
+  onAsk(fn) {
+    this._onAsk = fn
+  }
 
   /** Reflect engine state: 'loading' | 'ready' | 'offline'. */
-  setStatus (state) {
+  setStatus(state) {
     const map = {
       loading: { text: '● loading model…', cls: 'status loading' },
       ready: { text: '● on-device AI ready', cls: 'status ready' },
@@ -45,15 +49,15 @@ export class AiPanel {
     this.status.className = s.cls
   }
 
-  showThinking () {
+  showThinking() {
     this.answer.replaceChildren(el('span', { cls: 'thinking', text: 'Thinking on-device…' }))
   }
 
-  showAnswer (text) {
+  showAnswer(text) {
     this.answer.replaceChildren(el('span', { cls: 'answer-text', text }))
   }
 
-  showError (message) {
+  showError(message) {
     this.answer.replaceChildren(el('span', { cls: 'answer-error', text: message }))
   }
 }

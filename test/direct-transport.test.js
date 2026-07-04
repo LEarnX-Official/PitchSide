@@ -14,13 +14,42 @@ let PORT = 49760
 
 test('local mode: host binds TCP, guest connects, event syncs (offline, no DHT)', async () => {
   const port = PORT++
-  const host = new Room({ name: 'lan', nickname: 'h', host: true, mode: 'local', localPort: port, net, Corestore, crypto, b4a, storageDir: tmp() })
+  const host = new Room({
+    name: 'lan',
+    nickname: 'h',
+    host: true,
+    mode: 'local',
+    localPort: port,
+    net,
+    Corestore,
+    crypto,
+    b4a,
+    storageDir: tmp()
+  })
   await host.open()
-  assert.deepStrictEqual(host.transport.localBootstrapAddress, { host: '0.0.0.0', port }, 'host reports its listen address')
+  assert.deepStrictEqual(
+    host.transport.localBootstrapAddress,
+    { host: '0.0.0.0', port },
+    'host reports its listen address'
+  )
 
-  const guest = new Room({ name: 'lan', nickname: 'g', host: false, mode: 'local', localPort: port, remoteHost: '127.0.0.1', net, Corestore, crypto, b4a, storageDir: tmp() })
+  const guest = new Room({
+    name: 'lan',
+    nickname: 'g',
+    host: false,
+    mode: 'local',
+    localPort: port,
+    remoteHost: '127.0.0.1',
+    net,
+    Corestore,
+    crypto,
+    b4a,
+    storageDir: tmp()
+  })
   let got = null
-  guest.onEvent((e) => { if (e.kind === 'match') got = e })
+  guest.onEvent((e) => {
+    if (e.kind === 'match') got = e
+  })
   await guest.open()
 
   await sleep(1200)
@@ -30,7 +59,8 @@ test('local mode: host binds TCP, guest connects, event syncs (offline, no DHT)'
   assert.ok(got, 'guest received the event over the local TCP link')
   assert.strictEqual(got.data.text, 'LOCAL')
 
-  await host.close().catch(() => {}); await guest.close().catch(() => {})
+  await host.close().catch(() => {})
+  await guest.close().catch(() => {})
 })
 
 test('Room selects DirectTransport for local mode, SwarmTransport for internet', () => {
@@ -38,9 +68,29 @@ test('Room selects DirectTransport for local mode, SwarmTransport for internet',
   const { SwarmTransport } = require('../workers/lib/transport.js')
   const Hyperswarm = require('hyperswarm')
 
-  const local = new Room({ name: 'r', nickname: 'n', host: true, mode: 'local', net, Corestore, crypto, b4a, storageDir: tmp() })
+  const local = new Room({
+    name: 'r',
+    nickname: 'n',
+    host: true,
+    mode: 'local',
+    net,
+    Corestore,
+    crypto,
+    b4a,
+    storageDir: tmp()
+  })
   assert.ok(local.transport instanceof DirectTransport, 'local -> DirectTransport')
 
-  const inet = new Room({ name: 'r', nickname: 'n', host: true, mode: 'internet', Hyperswarm, Corestore, crypto, b4a, storageDir: tmp() })
+  const inet = new Room({
+    name: 'r',
+    nickname: 'n',
+    host: true,
+    mode: 'internet',
+    Hyperswarm,
+    Corestore,
+    crypto,
+    b4a,
+    storageDir: tmp()
+  })
   assert.ok(inet.transport instanceof SwarmTransport, 'internet -> SwarmTransport')
 })

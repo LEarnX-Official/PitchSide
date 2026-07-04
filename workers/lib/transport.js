@@ -25,7 +25,7 @@ class SwarmTransport {
   // Internet P2P via the Holepunch DHT — peers connect from anywhere (needs
   // internet). For the offline "same WiFi" mode, Room uses DirectTransport
   // instead (isolated DHT proved unreliable: a lone bootstrap can't route).
-  constructor ({ Hyperswarm, crypto, b4a }) {
+  constructor({ Hyperswarm, crypto, b4a }) {
     this._Hyperswarm = Hyperswarm
     this._crypto = crypto
     this._b4a = b4a
@@ -34,11 +34,17 @@ class SwarmTransport {
     this._onPeers = () => {}
   }
 
-  onConnection (fn) { this._onConnection = fn }
-  onPeers (fn) { this._onPeers = fn }
-  connectionCount () { return this.swarm ? this.swarm.connections.size : 0 }
+  onConnection(fn) {
+    this._onConnection = fn
+  }
+  onPeers(fn) {
+    this._onPeers = fn
+  }
+  connectionCount() {
+    return this.swarm ? this.swarm.connections.size : 0
+  }
 
-  async join (topicName) {
+  async join(topicName) {
     this.swarm = new this._Hyperswarm()
     this.swarm.on('connection', (conn) => {
       conn.on('error', () => {})
@@ -51,7 +57,7 @@ class SwarmTransport {
     await discovery.flushed()
   }
 
-  async destroy () {
+  async destroy() {
     if (this.swarm) await this.swarm.destroy()
     this.swarm = null
   }

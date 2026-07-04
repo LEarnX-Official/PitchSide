@@ -16,7 +16,7 @@ export class BetCards {
    * @param {object} opts
    * @param {() => string|null} opts.address  current wallet address (or null)
    */
-  constructor (container, { getAddress, isHost = false } = {}) {
+  constructor(container, { getAddress, isHost = false } = {}) {
     this.container = container
     this.getAddress = getAddress || (() => null)
     this.isHost = isHost // room host: can delete (cancel + hide) any bet card
@@ -36,14 +36,17 @@ export class BetCards {
     }
   }
 
-  on (name, fn) { this.cb[name] = fn; return this }
+  on(name, fn) {
+    this.cb[name] = fn
+    return this
+  }
 
   /** Sync the full set of bets from chain: add new cards, update existing. */
-  sync (bets) {
+  sync(bets) {
     for (const b of bets) this.upsert(b)
   }
 
-  upsert (bet) {
+  upsert(bet) {
     if (this.hidden.has(bet.betId)) return // host-hidden; never re-render
     const existing = this.cards.get(bet.betId)
     const merged = existing ? { ...existing.data, ...bet } : bet
@@ -56,8 +59,7 @@ export class BetCards {
       // New bet -> announce it in the chat as a system line, then the card.
       const banner = el('div', { cls: 'chat-row chat-bet-banner' })
       banner.append(el('span', { cls: 'chat-author', text: '🎲 bet' }))
-      banner.append(el('div', { cls: 'chat-text', text:
-        `New bet #${bet.betId}: ${bet.question}` }))
+      banner.append(el('div', { cls: 'chat-text', text: `New bet #${bet.betId}: ${bet.question}` }))
       this.container.append(banner)
       this.cards.set(bet.betId, { data: merged, node, banner })
       this.container.append(node)
@@ -67,7 +69,7 @@ export class BetCards {
 
   /** Hide a bet card (+ its banner) for good. Applied to all peers via the
    *  host's 'bet-hide' tombstone, and locally when the host clicks ×. */
-  hide (betId) {
+  hide(betId) {
     this.hidden.add(betId)
     const c = this.cards.get(betId)
     if (c) {
@@ -77,7 +79,7 @@ export class BetCards {
     }
   }
 
-  _card (b) {
+  _card(b) {
     const me = this.getAddress()
     const isHost = me && b.host && me.toLowerCase() === b.host.toLowerCase()
     const card = el('div', { cls: 'chat-bet-card', attrs: { 'data-bet': String(b.betId) } })
@@ -88,12 +90,19 @@ export class BetCards {
     // and broadcasts a hide so it disappears for every peer.
     if (this.isHost) {
       const del = el('button', { cls: 'row-del', text: '×', attrs: { title: 'Delete bet (host)' } })
-      del.addEventListener('click', (e) => { e.stopPropagation(); this._hostDelete(b.betId) })
+      del.addEventListener('click', (e) => {
+        e.stopPropagation()
+        this._hostDelete(b.betId)
+      })
       head.append(del)
     }
     card.append(head)
-    card.append(el('div', { cls: 'bet-meta hint', text:
-      `status: ${b.status} · pool: ${formatUsdt(b.totalPool || 0n)} USDT` }))
+    card.append(
+      el('div', {
+        cls: 'bet-meta hint',
+        text: `status: ${b.status} · pool: ${formatUsdt(b.totalPool || 0n)} USDT`
+      })
+    )
     if (b.oddsText) card.append(el('div', { cls: 'bet-odds hint', text: b.oddsText }))
 
     // Outcomes + join controls (only when Open and a wallet is connected).
@@ -101,9 +110,13 @@ export class BetCards {
     b.outcomes.forEach((label, i) => {
       const row = el('div', { cls: 'bet-outcome-row' })
       const pool = (b.pools && b.pools[i]) || 0n
-      const prob = b.probabilities && b.probabilities[i] != null
-        ? ` · ${(b.probabilities[i] * 100).toFixed(0)}%` : ''
-      row.append(el('span', { cls: 'bet-outcome-label', text: `${label} (${formatUsdt(pool)}${prob})` }))
+      const prob =
+        b.probabilities && b.probabilities[i] !== null
+          ? ` · ${(b.probabilities[i] * 100).toFixed(0)}%`
+          : ''
+      row.append(
+        el('span', { cls: 'bet-outcome-label', text: `${label} (${formatUsdt(pool)}${prob})` })
+      )
       if (b.status === 'Open' && me) {
         const amt = el('input', { cls: 'minute', attrs: { placeholder: 'USDT' } })
         const joinBtn = el('button', { cls: 'evt', text: 'Join' })
@@ -128,8 +141,10 @@ export class BetCards {
       cancelBtn.addEventListener('click', () => this._act('cancel', b.betId))
       actions.append(decideBtn, cancelBtn)
     } else if (isHost && b.status === 'Proposed') {
-      const label = b.proposedOutcome != null && b.outcomes[b.proposedOutcome]
-        ? `✔ Confirm: ${b.outcomes[b.proposedOutcome]}` : '✔ Confirm result'
+      const label =
+        b.proposedOutcome !== null && b.outcomes[b.proposedOutcome]
+          ? `✔ Confirm: ${b.outcomes[b.proposedOutcome]}`
+          : '✔ Confirm result'
       const confirmBtn = el('button', { cls: 'primary', text: label })
       confirmBtn.addEventListener('click', () => this._act('confirm', b.betId))
       const cancelBtn = el('button', { cls: 'evt', text: 'Reject' })
@@ -156,7 +171,7 @@ export class BetCards {
   // Host delete: cancel the bet on-chain (if the host owns it, enabling refunds)
   // and broadcast a hide so the card vanishes for every peer. Hides locally
   // right away regardless.
-  async _hostDelete (betId) {
+  async _hostDelete(betId) {
     this.cb.say(`deleting bet #${betId}…`)
     try {
       await this.cb.hostDelete(betId) // app.js: cancel-if-owned + broadcast bet-hide
@@ -168,63 +183,92 @@ export class BetCards {
     this.hide(betId)
   }
 
-  async _join (betId, outcome, amountStr) {
+  async _join(betId, outcome, amountStr) {
     let amount
-    try { amount = parseUsdt(amountStr) } catch (err) { return this.cb.say(err.message, true) }
+    try {
+      amount = parseUsdt(amountStr)
+    } catch (err) {
+      return this.cb.say(err.message, true)
+    }
     if (amount <= 0n) return this.cb.say('stake must be > 0', true)
     this.cb.say('approving + staking USDT…')
     try {
       await this.cb.join({ betId, outcome, amount })
       await this._refresh(betId)
       this.cb.say('stake placed.')
-    } catch (err) { this.cb.say('join failed: ' + err.message, true) }
+    } catch (err) {
+      this.cb.say('join failed: ' + err.message, true)
+    }
   }
 
-  async _odds (betId) {
-    const c = this.cards.get(betId); const b = c && c.data
+  async _odds(betId) {
+    const c = this.cards.get(betId)
+    const b = c && c.data
     if (!b) return
     this.cb.say('computing on-device odds…')
     try {
       const { probabilities, rationale } = await this.cb.odds({
-        betId, question: b.question, outcomes: b.outcomes
+        betId,
+        question: b.question,
+        outcomes: b.outcomes
       })
-      this.upsert({ ...b, probabilities, oddsText: '🤖 odds' + (rationale ? `: ${rationale}` : '') })
+      this.upsert({
+        ...b,
+        probabilities,
+        oddsText: '🤖 odds' + (rationale ? `: ${rationale}` : '')
+      })
       this.cb.say('odds updated (informational).')
-    } catch (err) { this.cb.say('odds failed: ' + err.message, true) }
+    } catch (err) {
+      this.cb.say('odds failed: ' + err.message, true)
+    }
   }
 
-  async _propose (betId) {
-    const c = this.cards.get(betId); const b = c && c.data
+  async _propose(betId) {
+    const c = this.cards.get(betId)
+    const b = c && c.data
     if (!b) return
     this.cb.say('AI deciding winner on-device…')
     try {
       await this.cb.propose({ betId, question: b.question, outcomes: b.outcomes })
       await this._refresh(betId)
       this.cb.say('AI outcome proposed — confirm to pay out.')
-    } catch (err) { this.cb.say('propose failed: ' + err.message, true) }
+    } catch (err) {
+      this.cb.say('propose failed: ' + err.message, true)
+    }
   }
 
-  async _act (name, betId) {
+  async _act(name, betId) {
     // Re-sync state first so we don't fire a tx that will revert.
     await this._refresh(betId)
-    const c = this.cards.get(betId); const b = c && c.data
+    const c = this.cards.get(betId)
+    const b = c && c.data
     if (b) {
-      if (name === 'refund' && b.status !== 'Cancelled') return this.cb.say(`refund needs the bet cancelled first (status: ${b.status})`, true)
-      if (name === 'claim' && b.status !== 'Resolved') return this.cb.say(`claim needs the bet resolved first (status: ${b.status})`, true)
-      if (name === 'confirm' && b.status !== 'Proposed') return this.cb.say(`confirm needs an AI proposal first (status: ${b.status})`, true)
+      if (name === 'refund' && b.status !== 'Cancelled') {
+        return this.cb.say(`refund needs the bet cancelled first (status: ${b.status})`, true)
+      }
+      if (name === 'claim' && b.status !== 'Resolved') {
+        return this.cb.say(`claim needs the bet resolved first (status: ${b.status})`, true)
+      }
+      if (name === 'confirm' && b.status !== 'Proposed') {
+        return this.cb.say(`confirm needs an AI proposal first (status: ${b.status})`, true)
+      }
     }
     this.cb.say(name + '…')
     try {
       await this.cb[name](betId)
       await this._refresh(betId)
       this.cb.say(name + ' done.')
-    } catch (err) { this.cb.say(`${name} failed: ` + err.message, true) }
+    } catch (err) {
+      this.cb.say(`${name} failed: ` + err.message, true)
+    }
   }
 
-  async _refresh (betId) {
+  async _refresh(betId) {
     try {
       const b = await this.cb.refreshBet(betId)
       if (b) this.upsert({ betId, ...b })
-    } catch { /* keep current state */ }
+    } catch {
+      /* keep current state */
+    }
   }
 }

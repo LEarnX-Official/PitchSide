@@ -8,13 +8,18 @@
 import { FeedView } from './ui/feed-view.js'
 import { ChatView } from './ui/chat-view.js'
 import { AiPanel } from './ui/ai-panel.js'
-import { fetchTodaysMatches, fetchMatch, matchLabel, newGoalEvents, statusEvent, matchIntroEvent } from './live-data.js'
+import {
+  fetchTodaysMatches,
+  fetchMatch,
+  matchLabel,
+  newGoalEvents,
+  statusEvent,
+  matchIntroEvent
+} from './live-data.js'
 import { encodeJoinCode, decodeJoinCode } from './join-code.js'
 import { BettingPanel, formatUsdt } from './ui/betting-panel.js'
 import { BetCards } from './ui/bet-cards.js'
-import {
-  Wallet, hasStoredSeed, generateSeed, loadStoredSeed
-} from './wallet.bundle.js' // bundled (WDK/ethers/bip39) for the sandboxed renderer
+import { Wallet, hasStoredSeed, generateSeed, loadStoredSeed } from './wallet.bundle.js' // bundled (WDK/ethers/bip39) for the sandboxed renderer
 import DEPLOYMENT from './contract/deployment.js'
 
 const bridge = window.bridge
@@ -23,7 +28,7 @@ const WORKER = '/workers/pitchside.js'
 const $ = (id) => document.getElementById(id)
 
 // --- worker messaging --------------------------------------------------------
-function toWorker (obj) {
+function toWorker(obj) {
   // Newline-delimit so the worker can split coalesced frames.
   bridge.writeWorkerIPC(WORKER, JSON.stringify(obj) + '\n')
 }
@@ -35,14 +40,17 @@ let _betCards = null
 // worker's async JSON replies resolve the right promise.
 const _pendingAi = new Map()
 let _aiReqId = 0
-function askWorkerAi (cmd, payload) {
+function askWorkerAi(cmd, payload) {
   const id = ++_aiReqId
   return new Promise((resolve, reject) => {
     _pendingAi.set(id, { resolve, reject })
     toWorker({ cmd, id, ...payload })
     // Safety timeout so a stuck request doesn't hang the UI forever.
     setTimeout(() => {
-      if (_pendingAi.has(id)) { _pendingAi.delete(id); reject(new Error('AI timed out')) }
+      if (_pendingAi.has(id)) {
+        _pendingAi.delete(id)
+        reject(new Error('AI timed out'))
+      }
     }, 60000)
   })
 }
@@ -54,7 +62,11 @@ bridge.onWorkerIPC(WORKER, (data) => {
     const line = _rxBuf.slice(0, idx)
     _rxBuf = _rxBuf.slice(idx + 1)
     if (!line.trim()) continue
-    try { onMessage(JSON.parse(line)) } catch { /* skip malformed */ }
+    try {
+      onMessage(JSON.parse(line))
+    } catch {
+      /* skip malformed */
+    }
   }
 })
 bridge.onWorkerStderr(WORKER, (data) => console.error('[worker]', decoder.decode(data)))
@@ -66,7 +78,7 @@ bridge.startWorker(WORKER)
 // --- connection mode UI ------------------------------------------------------
 // The "host's local address" field only makes sense for a GUEST joining a LOCAL
 // network — a local host generates the address; a guest needs to enter it.
-function updateModeUI () {
+function updateModeUI() {
   const local = $('mode').value === 'local'
   const guest = !$('isHost').checked
   $('bootstrapRow').classList.toggle('hidden', !(local && guest))
@@ -88,7 +100,8 @@ $('applyCode').addEventListener('click', () => {
     updateModeUI()
     $('fatal').textContent = '' // clear any prior error
     $('fatal').style.color = 'var(--accent)'
-    $('fatal').textContent = `Code applied — joining "${info.room}" (${info.mode}). Set your nickname and Join.`
+    $('fatal').textContent =
+      `Code applied — joining "${info.room}" (${info.mode}). Set your nickname and Join.`
   } catch (err) {
     $('fatal').style.color = ''
     $('fatal').textContent = err.message
@@ -98,7 +111,7 @@ $('applyCode').addEventListener('click', () => {
 // --- join flow ---------------------------------------------------------------
 $('joinBtn').addEventListener('click', () => start())
 
-function start () {
+function start() {
   const nickname = $('nickname').value.trim() || 'guest'
   const roomName = $('roomName').value.trim() || 'worldcup-final'
   const persona = $('persona').value
@@ -128,18 +141,30 @@ function start () {
     $('copyMsg').textContent = '(could not detect LAN IP — guests must enter it manually)'
   }
   $('copyCode').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(joinCode); $('copyMsg').textContent = 'copied!' }
-    catch { $('copyMsg').textContent = 'copy failed — select the code manually' }
-    setTimeout(() => { $('copyMsg').textContent = '' }, 2000)
+    try {
+      await navigator.clipboard.writeText(joinCode)
+      $('copyMsg').textContent = 'copied!'
+    } catch {
+      $('copyMsg').textContent = 'copy failed — select the code manually'
+    }
+    setTimeout(() => {
+      $('copyMsg').textContent = ''
+    }, 2000)
   })
 
   // Host can delete any feed/chat item: sends a 'delete' tombstone the worker
   // appends to the (host-only) feed, which every peer applies to hide the item.
   const deleteItem = (seq) => toWorker({ cmd: 'delete', targetSeq: seq })
   const feedView = new FeedView($('feed'), { isHost, onDelete: deleteItem })
-  const chatView = new ChatView($('chatList'), $('chatInput'), $('chatSend'), { isHost, onDelete: deleteItem })
+  const chatView = new ChatView($('chatList'), $('chatInput'), $('chatSend'), {
+    isHost,
+    onDelete: deleteItem
+  })
   const aiPanel = new AiPanel({
-    input: $('aiInput'), ask: $('aiAsk'), answer: $('aiAnswer'), status: $('aiStatus')
+    input: $('aiInput'),
+    ask: $('aiAsk'),
+    answer: $('aiAnswer'),
+    status: $('aiStatus')
   })
 
   // Worker -> UI
@@ -149,7 +174,7 @@ function start () {
         // Host 'bet-hide' tombstone: drop the bet card for every peer.
         if (msg.event && msg.event.kind === 'bet-hide') {
           const id = msg.event.data && msg.event.data.betId
-          if (id != null && _betCards) _betCards.hide(id)
+          if (id !== null && _betCards) _betCards.hide(id)
           break
         }
         feedView.render(msg.event)
@@ -191,7 +216,12 @@ function start () {
         break
       case 'commentary-skip':
         // Why the AI didn't commentate a match event (e.g. model not downloaded).
-        feedView.render({ kind: 'system', author: 'ai', at: Date.now(), data: { text: '🎙 AI skipped: ' + msg.reason } })
+        feedView.render({
+          kind: 'system',
+          author: 'ai',
+          at: Date.now(),
+          data: { text: '🎙 AI skipped: ' + msg.reason }
+        })
         break
       case 'error':
         console.error('worker error:', msg.message)
@@ -200,11 +230,15 @@ function start () {
   }
 
   // Show the local-network host the info guests need to connect over the LAN.
-  function showLocalAddress (address) {
+  function showLocalAddress(address) {
     const port = address.split(':')[1]
     feedView.render({
-      kind: 'system', author: 'net', at: Date.now(),
-      data: { text: `📶 Local network ready on port ${port}. Guests on the same WiFi: choose "Local network", uncheck Host, and enter  <your-LAN-IP>:${port}  (find your IP in system/WiFi settings).` }
+      kind: 'system',
+      author: 'net',
+      at: Date.now(),
+      data: {
+        text: `📶 Local network ready on port ${port}. Guests on the same WiFi: choose "Local network", uncheck Host, and enter  <your-LAN-IP>:${port}  (find your IP in system/WiFi settings).`
+      }
     })
   }
 
@@ -218,9 +252,9 @@ function start () {
     toWorker({ cmd: 'download-model' })
   })
 
-  function updateAiProgress (pct) {
+  function updateAiProgress(pct) {
     track.classList.remove('hidden')
-    if (pct != null) {
+    if (pct !== null) {
       fill.style.width = pct + '%'
       dlBtn.textContent = `downloading… ${pct}%`
     } else {
@@ -228,7 +262,7 @@ function start () {
     }
   }
 
-  function updateAiUi (status, reason) {
+  function updateAiUi(status, reason) {
     if (status === 'ready') {
       $('aiDownloadRow').classList.add('hidden')
       $('aiInput').disabled = false
@@ -242,7 +276,8 @@ function start () {
       // Model is cached — loading it from disk (no download).
       dlBtn.disabled = true
       dlBtn.textContent = 'loading cached model…'
-    } else { // offline
+    } else {
+      // offline
       dlBtn.disabled = false
       dlBtn.textContent = '⬇ download on-device AI model (~773MB)'
       if (reason) $('aiAnswer').textContent = 'last attempt failed: ' + reason
@@ -250,7 +285,10 @@ function start () {
   }
 
   // UI -> worker
-  aiPanel.onAsk((question) => { aiPanel.showThinking(); toWorker({ cmd: 'ask', question }) })
+  aiPanel.onAsk((question) => {
+    aiPanel.showThinking()
+    toWorker({ cmd: 'ask', question })
+  })
 
   if (isHost) {
     chatView.onSend((text) => toWorker({ cmd: 'chat', text }))
@@ -261,9 +299,20 @@ function start () {
   } else {
     // Guests can't post events, so the live-data panel + controls are host-only.
     $('livePanel')?.remove()
-    for (const id of ['chatInput', 'chatSend', 'reactHype', 'reactShock',
-      'evtGoal', 'evtCard', 'evtKick', 'evtCustom', 'minuteInput', 'customEvent']) {
-      const node = $(id); if (node) node.disabled = true
+    for (const id of [
+      'chatInput',
+      'chatSend',
+      'reactHype',
+      'reactShock',
+      'evtGoal',
+      'evtCard',
+      'evtKick',
+      'evtCustom',
+      'minuteInput',
+      'customEvent'
+    ]) {
+      const node = $(id)
+      if (node) node.disabled = true
     }
   }
 
@@ -276,16 +325,18 @@ function start () {
   // Fetch real matches from football-data.org, then "follow" one: poll it and
   // auto-post new goals/kickoff/full-time as events. The on-device LLM
   // commentates the REAL match. Internet is used only for the DATA, not the AI.
-  function setupLiveData () {
+  function setupLiveData() {
     const seenGoals = new Set()
     let followTimer = null
     let followId = null
     let prevStatus = null
-    const setLiveStatus = (t) => { $('liveStatus').textContent = t }
+    const setLiveStatus = (t) => {
+      $('liveStatus').textContent = t
+    }
 
     $('liveFetch').addEventListener('click', async () => {
       const key = $('apiKey').value.trim()
-      setLiveStatus('loading today\'s matches…')
+      setLiveStatus("loading today's matches…")
       try {
         const matches = await fetchTodaysMatches(key)
         const sel = $('liveMatches')
@@ -296,8 +347,14 @@ function start () {
           opt.textContent = matchLabel(m)
           sel.appendChild(opt)
         }
-        setLiveStatus(matches.length ? `${matches.length} matches today. Pick one, then Follow.` : 'no matches today.')
-      } catch (err) { setLiveStatus('error: ' + err.message) }
+        setLiveStatus(
+          matches.length
+            ? `${matches.length} matches today. Pick one, then Follow.`
+            : 'no matches today.'
+        )
+      } catch (err) {
+        setLiveStatus('error: ' + err.message)
+      }
     })
 
     $('liveMatches').addEventListener('change', () => {
@@ -325,20 +382,24 @@ function start () {
             // above already summarized them for the AI.
             newGoalEvents(m, seenGoals)
           } else {
-            const se = statusEvent(m, prevStatus); prevStatus = m.status
+            const se = statusEvent(m, prevStatus)
+            prevStatus = m.status
             if (se) toWorker({ cmd: 'match', event: se })
             for (const ev of newGoalEvents(m, seenGoals)) toWorker({ cmd: 'match', event: ev })
           }
           setLiveStatus(`following: ${matchLabel(m)}`)
           if (m.status === 'FINISHED') stopFollow()
-        } catch (err) { setLiveStatus('poll error: ' + err.message) }
+        } catch (err) {
+          setLiveStatus('poll error: ' + err.message)
+        }
       }
       tick()
       followTimer = setInterval(tick, 30000) // football-data free tier: be gentle
     })
 
-    function stopFollow () {
-      if (followTimer) clearInterval(followTimer); followTimer = null
+    function stopFollow() {
+      if (followTimer) clearInterval(followTimer)
+      followTimer = null
       $('liveStop').classList.add('hidden')
       $('liveFollow').classList.remove('hidden')
     }
@@ -360,7 +421,7 @@ function start () {
 // --- betting wiring ----------------------------------------------------------
 // Builds the BettingPanel and connects its callbacks to WDK (renderer/wallet.js)
 // for on-chain escrow calls and to the worker for on-device AI odds/outcome.
-function setupBetting ({ isHost, online }) {
+function setupBetting({ isHost, online }) {
   const panelEl = $('bettingPanel')
   const body = $('bettingBody')
   if (!panelEl || !body) return
@@ -392,13 +453,26 @@ function setupBetting ({ isHost, online }) {
   // Still render the panel so it's visible; wire a stub that explains why.
   if (noChain) {
     const panel = new BettingPanel(body, { isHost })
-    const nope = async () => { throw new Error('no betting contract configured — deploy first, then restart') }
+    const nope = async () => {
+      throw new Error('no betting contract configured — deploy first, then restart')
+    }
     panel
-      .on('connect', nope).on('createWallet', nope).on('refreshBalance', nope)
-      .on('createBet', nope).on('join', nope).on('odds', nope).on('propose', nope)
-      .on('confirm', nope).on('claim', nope).on('cancel', nope).on('refund', nope)
-      .on('refreshBet', nope).on('faucetGas', nope).on('faucetUsdt', nope)
-      .on('revealSeed', () => null).on('isLocalTestnet', () => false)
+      .on('connect', nope)
+      .on('createWallet', nope)
+      .on('refreshBalance', nope)
+      .on('createBet', nope)
+      .on('join', nope)
+      .on('odds', nope)
+      .on('propose', nope)
+      .on('confirm', nope)
+      .on('claim', nope)
+      .on('cancel', nope)
+      .on('refund', nope)
+      .on('refreshBet', nope)
+      .on('faucetGas', nope)
+      .on('faucetUsdt', nope)
+      .on('revealSeed', () => null)
+      .on('isLocalTestnet', () => false)
     return
   }
 
@@ -411,8 +485,10 @@ function setupBetting ({ isHost, online }) {
 
   // Helper: build grounding context for the AI from recent match feed events.
   const matchContext = () =>
-    (window.__pitchsideFeed || []).slice(-8)
-      .map((e) => '- ' + (e.data?.text || e.type || '')).join('\n')
+    (window.__pitchsideFeed || [])
+      .slice(-8)
+      .map((e) => '- ' + (e.data?.text || e.type || ''))
+      .join('\n')
 
   let stopWatch = null
   const startWatching = () => {
@@ -447,7 +523,9 @@ function setupBetting ({ isHost, online }) {
       // Labels are packed on-chain, so every peer's chat renders the same card.
       const { betId } = await wallet.createBet({
         matchRef: $('roomLabel').textContent || 'match',
-        question, outcomes, closesAt
+        question,
+        outcomes,
+        closesAt
       })
       // Show it in chat immediately (don't wait for the next poll).
       betCards.upsert(await wallet.getBetCard(betId))
@@ -471,13 +549,22 @@ function setupBetting ({ isHost, online }) {
     })
     .on('propose', async ({ betId, question, outcomes }) => {
       const res = await askWorkerAi('bet-outcome', { question, outcomes, context: matchContext() })
-      if (res.outcome == null) throw new Error('AI could not decide — resolve manually')
+      if (res.outcome === null) throw new Error('AI could not decide — resolve manually')
       await wallet.proposeResult({ betId, outcome: res.outcome, disputeWindow: 0 })
     })
-    .on('confirm', async (betId) => { await wallet.confirmResult(betId); await panel.refreshBalance() })
-    .on('claim', async (betId) => { await wallet.claim(betId); await panel.refreshBalance() })
+    .on('confirm', async (betId) => {
+      await wallet.confirmResult(betId)
+      await panel.refreshBalance()
+    })
+    .on('claim', async (betId) => {
+      await wallet.claim(betId)
+      await panel.refreshBalance()
+    })
     .on('cancel', (betId) => wallet.cancelBet(betId))
-    .on('refund', async (betId) => { await wallet.refund(betId); await panel.refreshBalance() })
+    .on('refund', async (betId) => {
+      await wallet.refund(betId)
+      await panel.refreshBalance()
+    })
     .on('refreshBet', refreshBet)
     .on('hostDelete', async (betId) => {
       // Try to cancel on-chain (only works if THIS wallet owns the bet and it's
@@ -485,8 +572,8 @@ function setupBetting ({ isHost, online }) {
       let cancelErr = null
       try {
         const b = await wallet.getBet(betId)
-        const ownsIt = wallet.address && b.host &&
-          wallet.address.toLowerCase() === b.host.toLowerCase()
+        const ownsIt =
+          wallet.address && b.host && wallet.address.toLowerCase() === b.host.toLowerCase()
         if (ownsIt && (b.status === 'Open' || b.status === 'Proposed')) {
           await wallet.cancelBet(betId)
           await panel.refreshBalance()
@@ -495,7 +582,9 @@ function setupBetting ({ isHost, online }) {
         } else {
           cancelErr = new Error(`bet is ${b.status}`)
         }
-      } catch (err) { cancelErr = err }
+      } catch (err) {
+        cancelErr = err
+      }
       // Broadcast the hide regardless (moderation). Host-only feed enforces auth.
       toWorker({ cmd: 'bet-hide', betId })
       if (cancelErr) throw cancelErr // surfaced by the card as "hide, cancel skipped"
@@ -503,17 +592,26 @@ function setupBetting ({ isHost, online }) {
     .on('say', (text, isError) => panel._say(text, isError))
 }
 
-// Outcome labels are client-side (the contract stores only the outcome count).
-const betLabels = new Map()
-
-function bindMatchButtons () {
+function bindMatchButtons() {
   const minute = () => Number($('minuteInput').value) || undefined
   $('evtGoal').addEventListener('click', () =>
-    toWorker({ cmd: 'match', event: { type: 'goal', minute: minute(), text: `GOAL! (${minute() ?? '?'}')` } }))
+    toWorker({
+      cmd: 'match',
+      event: { type: 'goal', minute: minute(), text: `GOAL! (${minute() ?? '?'}')` }
+    })
+  )
   $('evtCard').addEventListener('click', () =>
-    toWorker({ cmd: 'match', event: { type: 'card', minute: minute(), text: `Yellow card (${minute() ?? '?'}')` } }))
+    toWorker({
+      cmd: 'match',
+      event: { type: 'card', minute: minute(), text: `Yellow card (${minute() ?? '?'}')` }
+    })
+  )
   $('evtKick').addEventListener('click', () =>
-    toWorker({ cmd: 'match', event: { type: 'kickoff', minute: 0, text: 'Kick-off! The match is underway.' } }))
+    toWorker({
+      cmd: 'match',
+      event: { type: 'kickoff', minute: 0, text: 'Kick-off! The match is underway.' }
+    })
+  )
   $('evtCustom').addEventListener('click', () => {
     const text = $('customEvent').value.trim()
     if (!text) return

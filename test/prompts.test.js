@@ -1,7 +1,12 @@
 // test/prompts.test.js — pure prompt-building logic (fast, no I/O).
 const { test } = require('node:test')
 const assert = require('node:assert')
-const { PERSONAS, DEFAULT_PERSONA, commentaryPrompt, questionPrompt } = require('../workers/lib/prompts.js')
+const {
+  PERSONAS,
+  DEFAULT_PERSONA,
+  commentaryPrompt,
+  questionPrompt
+} = require('../workers/lib/prompts.js')
 
 test('personas exist and default is valid', () => {
   assert.ok(PERSONAS[DEFAULT_PERSONA], 'default persona is defined')
@@ -9,7 +14,10 @@ test('personas exist and default is valid', () => {
 })
 
 test('commentaryPrompt builds system+user turns from an event', () => {
-  const h = commentaryPrompt({ persona: 'hype', event: { type: 'goal', minute: 67, text: 'GOAL!' } })
+  const h = commentaryPrompt({
+    persona: 'hype',
+    event: { type: 'goal', minute: 67, text: 'GOAL!' }
+  })
   assert.strictEqual(h.length, 2)
   assert.strictEqual(h[0].role, 'system')
   assert.strictEqual(h[1].role, 'user')
@@ -22,7 +30,10 @@ test('unknown persona falls back to default (no crash)', () => {
 })
 
 test('questionPrompt injects recent-event context', () => {
-  const h = questionPrompt({ question: 'offside?', recentEvents: [{ kind: 'match', data: { text: 'GOAL 67' } }] })
+  const h = questionPrompt({
+    question: 'offside?',
+    recentEvents: [{ kind: 'match', data: { text: 'GOAL 67' } }]
+  })
   assert.ok(h[1].content.includes('GOAL 67'), 'recent context included')
   assert.ok(h[1].content.includes('offside?'), 'question included')
 })

@@ -1,1 +1,12 @@
 out
+node_modules
+contracts/node_modules
+contracts/artifacts
+contracts/cache
+contracts/deployments
+# generated artifacts (not hand-edited)
+renderer/wallet.bundle.js
+renderer/contract/*.abi.js
+assets/*.svg
+package-lock.json
+contracts/package-lock.json

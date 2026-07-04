@@ -10,8 +10,8 @@
   "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "lint": "prettier --check . && lunte",
-    "format": "prettier --write . && lunte --fix",
+    "lint": "prettier --check . && lunte renderer workers electron experiments test",
+    "format": "prettier --write . && lunte --fix renderer workers electron experiments test",
     "build:wallet": "esbuild renderer/wallet.js --bundle --format=esm --platform=browser --alias:sodium-native=./renderer/.stubs/sodium-native.js --inject:./renderer/.stubs/buffer-shim.js --define:global=globalThis --outfile=renderer/wallet.bundle.js",
     "prestart": "npm run build:wallet",
     "start": "electron-forge start -- --no-updates",

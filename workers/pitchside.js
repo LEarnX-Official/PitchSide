@@ -45,7 +45,7 @@ const storageRoot = path.join(os.tmpdir(), 'pitchside')
 let room = null
 let engine = null
 
-function send (obj) {
+function send(obj) {
   // Newline-delimit frames so the renderer can split coalesced/partial chunks.
   pipe.write(b4a.from(JSON.stringify(obj) + '\n'))
 }
@@ -63,9 +63,13 @@ pipe.on('data', (data) => {
   }
 })
 
-async function dispatch (line) {
+async function dispatch(line) {
   let msg
-  try { msg = JSON.parse(line) } catch { return } // ignore malformed frames
+  try {
+    msg = JSON.parse(line)
+  } catch {
+    return
+  } // ignore malformed frames
   if (!msg || typeof msg.cmd !== 'string') return
   try {
     await handle(msg)
@@ -78,25 +82,36 @@ let currentPersona = 'hype'
 let currentHost = false
 let currentNick = 'guest'
 
-async function handle (msg) {
+async function handle(msg) {
   switch (msg.cmd) {
-    case 'join': return join(msg)
-    case 'leave': return leave()
-    case 'match': return room && room.postMatchEvent(msg.event)
-    case 'chat': return room && room.postChat(msg.text)
-    case 'react': return room && room.postReaction(msg.emoji)
-    case 'delete': return room && room.postDelete(msg.targetSeq)
-    case 'bet-hide': return room && room.postBetHide(msg.betId)
-    case 'ask': return ask(msg.question)
-    case 'bet-odds': return betOdds(msg)
-    case 'bet-outcome': return betOutcome(msg)
-    case 'download-model': return downloadModel()
+    case 'join':
+      return join(msg)
+    case 'leave':
+      return leave()
+    case 'match':
+      return room && room.postMatchEvent(msg.event)
+    case 'chat':
+      return room && room.postChat(msg.text)
+    case 'react':
+      return room && room.postReaction(msg.emoji)
+    case 'delete':
+      return room && room.postDelete(msg.targetSeq)
+    case 'bet-hide':
+      return room && room.postBetHide(msg.betId)
+    case 'ask':
+      return ask(msg.question)
+    case 'bet-odds':
+      return betOdds(msg)
+    case 'bet-outcome':
+      return betOutcome(msg)
+    case 'download-model':
+      return downloadModel()
   }
 }
 
 // AI betting odds (informational, pari-mutuel). Runs on-device via QVAC.
 // msg: { id, question, outcomes:[...], context } -> { type:'bet-odds', id, ... }
-async function betOdds ({ id, question, outcomes, context }) {
+async function betOdds({ id, question, outcomes, context }) {
   if (!engine || !engine.isReady) {
     return send({ type: 'bet-odds', id, error: 'AI offline — download the model first' })
   }
@@ -110,7 +125,7 @@ async function betOdds ({ id, question, outcomes, context }) {
 
 // AI suggested winning outcome, grounded in real match data when provided.
 // msg: { id, question, outcomes:[...], context } -> { type:'bet-outcome', id, ... }
-async function betOutcome ({ id, question, outcomes, context }) {
+async function betOutcome({ id, question, outcomes, context }) {
   if (!engine || !engine.isReady) {
     return send({ type: 'bet-outcome', id, error: 'AI offline — download the model first' })
   }
@@ -122,14 +137,24 @@ async function betOutcome ({ id, question, outcomes, context }) {
   }
 }
 
-async function leave () {
-  if (room) { try { await room.close() } catch {} ; room = null }
+async function leave() {
+  if (room) {
+    try {
+      await room.close()
+    } catch {}
+    room = null
+  }
   send({ type: 'left' })
 }
 
-async function join ({ room: name, nickname, host, persona, mode, bootstrap }) {
+async function join({ room: name, nickname, host, persona, mode, bootstrap }) {
   // Guard against a double-join leaking the previous room.
-  if (room) { try { await room.close() } catch {} ; room = null }
+  if (room) {
+    try {
+      await room.close()
+    } catch {}
+    room = null
+  }
 
   currentPersona = persona || 'hype'
   currentHost = !!host
@@ -147,10 +172,18 @@ async function join ({ room: name, nickname, host, persona, mode, bootstrap }) {
   }
 
   room = new Room({
-    name, nickname: currentNick, host: currentHost,
-    Hyperswarm, DHT, net, Corestore, crypto, b4a,
+    name,
+    nickname: currentNick,
+    host: currentHost,
+    Hyperswarm,
+    DHT,
+    net,
+    Corestore,
+    crypto,
+    b4a,
     mode: mode || 'internet',
-    localPort, remoteHost,
+    localPort,
+    remoteHost,
     storageDir: path.join(storageRoot, name + '-' + currentNick)
   })
 
@@ -193,7 +226,7 @@ async function join ({ room: name, nickname, host, persona, mode, bootstrap }) {
 
 // If the model is already cached on disk, load it into the engine so the AI is
 // ready immediately (no re-download). Called on join. Silent if not cached.
-async function autoLoadIfCached () {
+async function autoLoadIfCached() {
   try {
     const env = require('bare-env')
     const home = env.HOME || env.USERPROFILE || env.SNAP_USER_COMMON
@@ -204,7 +237,9 @@ async function autoLoadIfCached () {
     try {
       const fs = require('bare-fs')
       cached = fs.readdirSync(modelsDir).some((f) => String(f).endsWith('.gguf'))
-    } catch { cached = false }
+    } catch {
+      cached = false
+    }
     if (!cached) return // not downloaded yet -> stay offline
 
     send({ type: 'ai', status: 'loading' })
@@ -216,7 +251,7 @@ async function autoLoadIfCached () {
 }
 
 // User-triggered: QVAC downloads the model from the HF URL, streaming progress.
-async function downloadModel () {
+async function downloadModel() {
   if (!engine) engine = new CommentaryEngine({ persona: currentPersona })
   if (engine.isReady) return send({ type: 'ai', status: 'ready' })
 
@@ -226,9 +261,9 @@ async function downloadModel () {
     if (typeof p === 'number') pct = p
     else if (p && typeof p === 'object') {
       if (typeof p.percentage === 'number') pct = p.percentage
-      else if (p.downloaded && p.total) pct = p.downloaded / p.total * 100
+      else if (p.downloaded && p.total) pct = (p.downloaded / p.total) * 100
     }
-    send({ type: 'ai-progress', pct: pct == null ? null : Math.round(pct) })
+    send({ type: 'ai-progress', pct: pct === null ? null : Math.round(pct) })
   }
   try {
     await engine.init()
@@ -238,7 +273,7 @@ async function downloadModel () {
   }
 }
 
-async function ask (question) {
+async function ask(question) {
   if (!engine || !engine.isReady) {
     return send({ type: 'answer', text: '(AI offline — on-device model unavailable)' })
   }

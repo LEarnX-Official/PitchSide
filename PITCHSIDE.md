@@ -25,6 +25,7 @@ Pear v2 removed the v1 HTML-entrypoint desktop model (`ERR_LEGACY`).
   injected deps so it runs under Bare.
 
 ### JSON protocol
+
 Renderer → worker: `{cmd:'join'|'match'|'chat'|'react'|'ask', ...}`
 Worker → renderer: `{type:'event'|'peers'|'ai'|'answer'|'error', ...}`
 
@@ -58,6 +59,7 @@ electron-forge). Regenerate your own with `pear touch` if forking.
   display; runtime renderer/worker logs go to DevTools, not the terminal.
 
 ## What to demo
+
 Host machine: check "Host", Join, click ⚽ Goal → the event (and, with the model loaded,
 AI commentary) appears. Second machine: uncheck "Host", same room name, Join → receives
 the live feed. Turn off internet first for the money shot.

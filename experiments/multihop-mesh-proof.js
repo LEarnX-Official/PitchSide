@@ -23,7 +23,7 @@ const keyPair = crypto.keyPair(seed)
 
 // A is the writer (has the keypair). B and C are read-only replicas that open the
 // SAME core by its public key — exactly how the app's host/guest model works.
-function makePeer (name, writable) {
+function makePeer(name, writable) {
   const store = new Corestore('./.mesh-store-' + name)
   // Pass BOTH key and keyPair for the writer so core.key === keyPair.publicKey,
   // matching what read-only replicas open by. (store.get({keyPair}) alone derives
@@ -34,16 +34,18 @@ function makePeer (name, writable) {
   return { name, store, feed }
 }
 
-function sleep (ms) { return new Promise((r) => setTimeout(r, ms)) }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms))
+}
 
 // Replicate a store over a raw socket. isInitiator must differ on each end.
 // Corestore.replicate(isInitiator, { stream }) creates the protocol stream and
 // pipes it through the given raw socket.
-function replicateOver (store, socket, isInitiator) {
+function replicateOver(store, socket, isInitiator) {
   const proto = store.replicate(isInitiator)
   proto.pipe(socket).pipe(proto)
 }
-function listen (relay, port) {
+function listen(relay, port) {
   return new Promise((resolve) => {
     const server = net.createServer((socket) => {
       replicateOver(relay.store, socket, false) // inbound = responder
@@ -51,17 +53,19 @@ function listen (relay, port) {
     server.listen(port, '127.0.0.1', () => resolve(server))
   })
 }
-function dial (peer, port, label) {
+function dial(peer, port, label) {
   const socket = net.connect(port, '127.0.0.1', () => console.log(`  🔗 ${label}`))
   replicateOver(peer.store, socket, true) // outbound = initiator
 }
 
-async function main () {
+async function main() {
   console.log('=== Multi-hop stadium mesh test ===\n')
-  const A = makePeer('A', true)   // writer (the fan who posts the GOAL)
-  const B = makePeer('B', false)  // relay (read-only replica)
-  const C = makePeer('C', false)  // recipient (read-only replica)
-  await A.feed.ready(); await B.feed.ready(); await C.feed.ready()
+  const A = makePeer('A', true) // writer (the fan who posts the GOAL)
+  const B = makePeer('B', false) // relay (read-only replica)
+  const C = makePeer('C', false) // recipient (read-only replica)
+  await A.feed.ready()
+  await B.feed.ready()
+  await C.feed.ready()
 
   console.log('Topology:  A <-> B <-> C     (A and C are NOT linked)\n')
 
@@ -95,11 +99,12 @@ async function main () {
   await A.feed.append({ type: 'goal', minute: 90, text: 'GOAL! (A posted this)' })
 
   await sleep(4000) // propagate across two hops
-  clearInterval(poll); clearInterval(pollB)
+  clearInterval(poll)
+  clearInterval(pollB)
 
   console.log('\n=== RESULT ===')
   if (got && got.text && got.text.includes('A posted')) {
-    console.log('✅ MULTI-HOP WORKS: C received A\'s event without ever connecting to A.')
+    console.log("✅ MULTI-HOP WORKS: C received A's event without ever connecting to A.")
     console.log('   Data relayed A -> B -> C. This is the stadium-mesh concept, proven.')
   } else {
     console.log('❌ C did not receive it. C.feed.length =', C.feed.length)
@@ -107,4 +112,7 @@ async function main () {
   process.exit(0)
 }
 
-main().catch((e) => { console.error('FAILED:', e.message, e.stack); process.exit(1) })
+main().catch((e) => {
+  console.error('FAILED:', e.message, e.stack)
+  process.exit(1)
+})

@@ -24,7 +24,9 @@ async function main() {
   const decimals = Number(await usdt.decimals())
 
   const targets = (process.env.FUND || '')
-    .split(',').map((s) => s.trim()).filter(Boolean)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 
   if (targets.length === 0) {
     console.log('No FUND=<address> provided.')
@@ -37,15 +39,23 @@ async function main() {
   const usdtAmt = ethers.parseUnits('10000', decimals)
 
   for (const to of targets) {
-    if (!ethers.isAddress(to)) { console.log(`skip invalid address: ${to}`); continue }
+    if (!ethers.isAddress(to)) {
+      console.log(`skip invalid address: ${to}`)
+      continue
+    }
     await (await funder.sendTransaction({ to, value: nativeAmt })).wait()
     await (await usdt.mint(to, usdtAmt)).wait()
     const nat = await ethers.provider.getBalance(to)
     const bal = await usdt.balanceOf(to)
-    console.log(`Funded ${to}: ${ethers.formatEther(nat)} native, ${ethers.formatUnits(bal, decimals)} USDT`)
+    console.log(
+      `Funded ${to}: ${ethers.formatEther(nat)} native, ${ethers.formatUnits(bal, decimals)} USDT`
+    )
   }
   console.log('\nUSDT token address:', dep.usdt)
   console.log('Bets  contract   :', dep.bets)
 }
 
-main().catch((err) => { console.error(err); process.exitCode = 1 })
+main().catch((err) => {
+  console.error(err)
+  process.exitCode = 1
+})

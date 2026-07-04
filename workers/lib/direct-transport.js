@@ -24,7 +24,7 @@ class DirectTransport {
    * @param {number}  [opts.port=49737] - port to bind (host) or dial (guest)
    * @param {string}  [opts.remoteHost] - host IP to dial (guest only)
    */
-  constructor ({ net, host, port = 49737, remoteHost }) {
+  constructor({ net, host, port = 49737, remoteHost }) {
     if (!net) throw new Error('DirectTransport requires a `net` module')
     this._net = net
     this._isHost = !!host
@@ -37,19 +37,28 @@ class DirectTransport {
     this.localBootstrapAddress = null // { host, port } once the host is listening
   }
 
-  onConnection (fn) { this._onConnection = fn }
-  onPeers (fn) { this._onPeers = fn }
-  connectionCount () { return this._conns.size }
+  onConnection(fn) {
+    this._onConnection = fn
+  }
+  onPeers(fn) {
+    this._onPeers = fn
+  }
+  connectionCount() {
+    return this._conns.size
+  }
 
-  _track (socket, initiator) {
+  _track(socket, initiator) {
     this._conns.add(socket)
     this._onPeers(this._conns.size)
     socket.on('error', () => {})
-    socket.on('close', () => { this._conns.delete(socket); this._onPeers(this._conns.size) })
+    socket.on('close', () => {
+      this._conns.delete(socket)
+      this._onPeers(this._conns.size)
+    })
     this._onConnection({ initiator, stream: socket })
   }
 
-  async join (/* topicName unused — the port identifies the room on the LAN */) {
+  async join(/* topicName unused — the port identifies the room on the LAN */) {
     if (this._isHost) {
       this._server = this._net.createServer((socket) => this._track(socket, false))
       await new Promise((resolve, reject) => {
@@ -64,10 +73,19 @@ class DirectTransport {
     }
   }
 
-  async destroy () {
-    for (const s of this._conns) { try { s.destroy() } catch {} }
+  async destroy() {
+    for (const s of this._conns) {
+      try {
+        s.destroy()
+      } catch {}
+    }
     this._conns.clear()
-    if (this._server) { try { this._server.close() } catch {} ; this._server = null }
+    if (this._server) {
+      try {
+        this._server.close()
+      } catch {}
+      this._server = null
+    }
   }
 }
 

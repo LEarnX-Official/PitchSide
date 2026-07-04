@@ -56,7 +56,6 @@ describe('WDK wallet end-to-end (bundled)', function () {
     // in-process node is exposed at the standard localhost port during `npx
     // hardhat test` only if `--network localhost`; otherwise we start it here.
     rpcUrl = 'http://127.0.0.1:8545'
-
     ;[funder] = await ethers.getSigners()
 
     const MockUSDT = await ethers.getContractFactory('MockUSDT')
@@ -103,7 +102,10 @@ describe('WDK wallet end-to-end (bundled)', function () {
     // create
     const closesAt = Math.floor(Date.now() / 1000) + 3600
     const { betId } = await host.createBet({
-      matchRef: 'ARS-CHE', question: 'Will Arsenal win?', outcomes: ['Yes', 'No'], closesAt
+      matchRef: 'ARS-CHE',
+      question: 'Will Arsenal win?',
+      outcomes: ['Yes', 'No'],
+      closesAt
     })
     expect(betId).to.be.a('number')
 

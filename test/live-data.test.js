@@ -12,8 +12,13 @@ test('load live-data module', async () => {
 })
 
 const norm = {
-  id: 1, status: 'IN_PLAY', minute: 67, home: 'Arsenal', away: 'Chelsea',
-  scoreHome: 2, scoreAway: 1,
+  id: 1,
+  status: 'IN_PLAY',
+  minute: 67,
+  home: 'Arsenal',
+  away: 'Chelsea',
+  scoreHome: 2,
+  scoreAway: 1,
   goals: [
     { minute: 12, type: 'REGULAR', team: 'Arsenal', scorer: 'Saka', home: 1, away: 0 },
     { minute: 34, type: 'PENALTY', team: 'Chelsea', scorer: 'Palmer', home: 1, away: 1 }
@@ -34,7 +39,7 @@ test('newGoalEvents produces one event per goal, with penalty tag', () => {
 
 test('newGoalEvents dedups across polls (no repeats)', () => {
   const seen = new Set()
-  mod.newGoalEvents(norm, seen)          // first poll
+  mod.newGoalEvents(norm, seen) // first poll
   const again = mod.newGoalEvents(norm, seen) // second poll, same data
   assert.strictEqual(again.length, 0, 'no duplicate events on re-poll')
 })
@@ -49,17 +54,40 @@ test('statusEvent emits kickoff and full-time on transitions', () => {
 })
 
 test('matchIntroEvent sets the scene for a live match (immediate AI context)', () => {
-  const ev = mod.matchIntroEvent({ status: 'IN_PLAY', minute: 67, home: 'Arsenal', away: 'Chelsea', scoreHome: 2, scoreAway: 1, goals: [{ minute: 12, scorer: 'Saka' }] })
+  const ev = mod.matchIntroEvent({
+    status: 'IN_PLAY',
+    minute: 67,
+    home: 'Arsenal',
+    away: 'Chelsea',
+    scoreHome: 2,
+    scoreAway: 1,
+    goals: [{ minute: 12, scorer: 'Saka' }]
+  })
   assert.strictEqual(ev.type, 'intro')
   assert.ok(ev.text.includes('Arsenal') && ev.text.includes('Chelsea'), 'teams in intro')
-  assert.ok(ev.text.includes("2–1"), 'current score in intro')
+  assert.ok(ev.text.includes('2–1'), 'current score in intro')
   assert.ok(ev.text.includes('Saka'), 'goals so far summarized')
   assert.ok(ev.text.toLowerCase().includes('live'), 'live status noted')
 })
 
 test('matchIntroEvent handles upcoming and finished matches', () => {
-  const up = mod.matchIntroEvent({ status: 'SCHEDULED', home: 'A', away: 'B', scoreHome: 0, scoreAway: 0, goals: [] })
+  const up = mod.matchIntroEvent({
+    status: 'SCHEDULED',
+    home: 'A',
+    away: 'B',
+    scoreHome: 0,
+    scoreAway: 0,
+    goals: []
+  })
   assert.ok(up.text.toLowerCase().includes('upcoming'))
-  const done = mod.matchIntroEvent({ status: 'FINISHED', minute: 90, home: 'A', away: 'B', scoreHome: 3, scoreAway: 2, goals: [] })
+  const done = mod.matchIntroEvent({
+    status: 'FINISHED',
+    minute: 90,
+    home: 'A',
+    away: 'B',
+    scoreHome: 3,
+    scoreAway: 2,
+    goals: []
+  })
   assert.ok(done.text.toLowerCase().includes('finished') && done.text.includes('3–2'))
 })

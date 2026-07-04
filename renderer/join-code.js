@@ -14,12 +14,14 @@
 
 const PREFIX = 'PS1-'
 
-function b64urlEncode (str) {
+function b64urlEncode(str) {
   // btoa is available in the renderer (browser env).
   return btoa(unescape(encodeURIComponent(str)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
-function b64urlDecode (s) {
+function b64urlDecode(s) {
   s = s.replace(/-/g, '+').replace(/_/g, '/')
   while (s.length % 4) s += '='
   return decodeURIComponent(escape(atob(s)))
@@ -30,7 +32,7 @@ function b64urlDecode (s) {
  * @param {{room:string, mode:string, host?:string}} info
  *   host = "ip:port" (required for local mode)
  */
-export function encodeJoinCode ({ room, mode, host }) {
+export function encodeJoinCode({ room, mode, host }) {
   const payload = { v: 1, r: room, m: mode === 'local' ? 'l' : 'i' }
   if (mode === 'local' && host) payload.h = host
   return PREFIX + b64urlEncode(JSON.stringify(payload))
@@ -39,18 +41,20 @@ export function encodeJoinCode ({ room, mode, host }) {
 /**
  * Decode a join code back into { room, mode, host }. Throws on bad codes.
  */
-export function decodeJoinCode (code) {
+export function decodeJoinCode(code) {
   const c = String(code).trim()
   if (!c.startsWith(PREFIX)) throw new Error('not a PitchSide join code')
   let payload
   try {
     payload = JSON.parse(b64urlDecode(c.slice(PREFIX.length)))
-  } catch { throw new Error('invalid join code') }
+  } catch {
+    throw new Error('invalid join code')
+  }
   if (!payload || !payload.r) throw new Error('invalid join code')
   const mode = payload.m === 'l' ? 'local' : 'internet'
   return {
     room: payload.r,
     mode,
-    host: mode === 'local' ? (payload.h || null) : null
+    host: mode === 'local' ? payload.h || null : null
   }
 }

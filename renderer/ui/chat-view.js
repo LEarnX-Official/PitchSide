@@ -17,7 +17,7 @@ export class ChatView {
    * @param {HTMLButtonElement} sendEl
    * @param {object} [opts] { isHost, onDelete }
    */
-  constructor (listEl, inputEl, sendEl, { isHost = false, onDelete = () => {} } = {}) {
+  constructor(listEl, inputEl, sendEl, { isHost = false, onDelete = () => {} } = {}) {
     this.listEl = listEl
     this.inputEl = inputEl
     this.sendEl = sendEl
@@ -32,38 +32,45 @@ export class ChatView {
       this.inputEl.value = ''
     }
     this.sendEl.addEventListener('click', submit)
-    this.inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit() })
+    this.inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit()
+    })
   }
 
   /** Register the callback fired when the user sends a message. */
-  onSend (fn) { this._onSend = fn }
+  onSend(fn) {
+    this._onSend = fn
+  }
 
   /** Render one chat event. Delete tombstones remove their target; others ignored. */
-  render (event) {
+  render(event) {
     if (event.kind === 'delete') {
-      if (event.data && event.data.targetSeq != null) this.removeBySeq(event.data.targetSeq)
+      if (event.data && event.data.targetSeq !== null) this.removeBySeq(event.data.targetSeq)
       return
     }
     if (event.kind !== 'chat') return
     const row = el('div', { cls: 'chat-row' })
-    if (event.seq != null) row.setAttribute('data-seq', String(event.seq))
+    if (event.seq !== null) row.setAttribute('data-seq', String(event.seq))
     row.appendChild(el('span', { cls: 'chat-author', text: event.author }))
     row.appendChild(el('span', { cls: 'chat-time', text: clock(event.at) }))
-    if (this.isHost && event.seq != null) row.appendChild(this._delBtn(event.seq))
+    if (this.isHost && event.seq !== null) row.appendChild(this._delBtn(event.seq))
     row.appendChild(el('div', { cls: 'chat-text', text: event.data.text }))
     this.listEl.appendChild(row)
     this.listEl.scrollTop = this.listEl.scrollHeight
   }
 
   /** Remove a chat row by its event seq (host delete synced). */
-  removeBySeq (seq) {
+  removeBySeq(seq) {
     const node = this.listEl.querySelector(`.chat-row[data-seq="${seq}"]`)
     if (node) node.remove()
   }
 
-  _delBtn (seq) {
+  _delBtn(seq) {
     const btn = el('button', { cls: 'row-del', text: '×', attrs: { title: 'Delete (host)' } })
-    btn.addEventListener('click', (e) => { e.stopPropagation(); this.onDelete(seq) })
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      this.onDelete(seq)
+    })
     return btn
   }
 }

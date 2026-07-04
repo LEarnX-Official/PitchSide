@@ -18,7 +18,7 @@ Section A                Section B                Section C
 
 Each phone links only to a few nearby phones. A "GOAL" posted anywhere
 **replicates neighbor-to-neighbor** until it has spanned the venue. No phone
-needs to reach the whole stadium — the crowd's overlapping links *are* the network.
+needs to reach the whole stadium — the crowd's overlapping links _are_ the network.
 
 ## Why this actually works: Hypercore does the relay
 
@@ -29,12 +29,12 @@ multi-hop — no routing code required.
 
 **Proven on desktop** (run these):
 
-| Proof | File | Result |
-|---|---|---|
-| A→B→C relay (A,C never linked) | `experiments/multihop-mesh-proof.js` | ✅ C gets A's event via B |
-| 5-node chain A→B→C→D→E | `experiments/mesh-chain-selfheal.js` | ✅ reaches E, 4 hops |
-| Self-healing (kill a relay) | `experiments/mesh-chain-selfheal.js` | ✅ reroutes via backup path |
-| App `Room` over `MeshTransport` | `experiments/room-over-mesh.js` | ✅ real app code multi-hops |
+| Proof                           | File                                 | Result                      |
+| ------------------------------- | ------------------------------------ | --------------------------- |
+| A→B→C relay (A,C never linked)  | `experiments/multihop-mesh-proof.js` | ✅ C gets A's event via B   |
+| 5-node chain A→B→C→D→E          | `experiments/mesh-chain-selfheal.js` | ✅ reaches E, 4 hops        |
+| Self-healing (kill a relay)     | `experiments/mesh-chain-selfheal.js` | ✅ reroutes via backup path |
+| App `Room` over `MeshTransport` | `experiments/room-over-mesh.js`      | ✅ real app code multi-hops |
 
 ## Architecture: pluggable transport
 
@@ -63,14 +63,14 @@ Swapping `SwarmTransport` → `MeshTransport` swaps the entire networking model
 
 ## What's built vs. what's left
 
-| Layer | Status |
-|---|---|
-| Multi-hop relay / gossip | ✅ Hypercore (proven) |
-| Self-healing reroute | ✅ Hypercore (proven) |
+| Layer                         | Status                                |
+| ----------------------------- | ------------------------------------- |
+| Multi-hop relay / gossip      | ✅ Hypercore (proven)                 |
+| Self-healing reroute          | ✅ Hypercore (proven)                 |
 | Pluggable transport interface | ✅ `SwarmTransport` + `MeshTransport` |
-| App `Room` over mesh | ✅ verified |
-| Swarm path (no regression) | ✅ verified |
-| **Radio `link` layer** | ⚠️ **to build** — native module |
+| App `Room` over mesh          | ✅ verified                           |
+| Swarm path (no regression)    | ✅ verified                           |
+| **Radio `link` layer**        | ⚠️ **to build** — native module       |
 
 ### The remaining piece: the `link` layer
 

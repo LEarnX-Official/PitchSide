@@ -28,7 +28,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 let PORT = 49810
 const servers = []
 
-function makePeer (name, writable) {
+function makePeer(name, writable) {
   const store = new Corestore('./.chain-store-' + name)
   const feed = writable
     ? store.get({ key: keyPair.publicKey, keyPair, valueEncoding: 'json' })
@@ -36,7 +36,7 @@ function makePeer (name, writable) {
   return { name, store, feed }
 }
 
-function replicateOver (store, socket, isInitiator) {
+function replicateOver(store, socket, isInitiator) {
   const proto = store.replicate(isInitiator)
   proto.on('error', () => {})
   socket.on('error', () => {})
@@ -45,7 +45,7 @@ function replicateOver (store, socket, isInitiator) {
 }
 
 // Create a bidirectional link between two peers over a fresh TCP port.
-async function link (x, y) {
+async function link(x, y) {
   const port = PORT++
   const conns = []
   const server = net.createServer((socket) => {
@@ -60,13 +60,13 @@ async function link (x, y) {
 }
 
 // A relay must download the feed to have data to forward.
-function beRelay (peer) {
+function beRelay(peer) {
   peer.feed.download({ start: 0, end: -1 })
   const poll = setInterval(() => peer.feed.update().catch(() => {}), 200)
   return poll
 }
 
-async function waitFor (peer, predicate, ms) {
+async function waitFor(peer, predicate, ms) {
   const deadline = Date.now() + ms
   while (Date.now() < deadline) {
     if (peer.feed.length > 0) {
@@ -80,7 +80,7 @@ async function waitFor (peer, predicate, ms) {
   return null
 }
 
-async function part1Chain () {
+async function part1Chain() {
   console.log('\n=== PART 1: 5-node chain  A - B - C - D - E ===')
   const A = makePeer('A', true)
   const nodes = { A }
@@ -100,14 +100,18 @@ async function part1Chain () {
   console.log('\n[A] posts GOAL (E is 4 hops away, no direct link to A)...')
   await A.feed.append({ type: 'goal', minute: 88, text: 'GOAL across the stadium!' })
 
-  const got = await waitFor(nodes.E, (b) => b && b.text && b.text.includes('across the stadium'), 6000)
+  const got = await waitFor(
+    nodes.E,
+    (b) => b && b.text && b.text.includes('across the stadium'),
+    6000
+  )
   polls.forEach(clearInterval)
   if (got) console.log(`  ⇐ [E] received after 4 hops: "${got.text}"  ✅`)
   else console.log('  ❌ E did not receive it (len=' + nodes.E.feed.length + ')')
   return !!got
 }
 
-async function part2SelfHeal () {
+async function part2SelfHeal() {
   console.log('\n=== PART 2: self-healing (kill a relay, data reroutes) ===')
   const A = makePeer('A2', true)
   const B = makePeer('B2', false)
@@ -122,7 +126,7 @@ async function part2SelfHeal () {
   await link(A, B)
   await link(B, C)
   await link(C, E)
-  const backup = await link(B, E) // alternate path B->E that doesn't need C
+  await link(B, E) // alternate path B->E that doesn't need C
   await sleep(1200)
 
   // First event flows (via any path).
@@ -145,14 +149,21 @@ async function part2SelfHeal () {
   return !!(g1 && g2)
 }
 
-async function main () {
+async function main() {
   const ok1 = await part1Chain()
   const ok2 = await part2SelfHeal()
   console.log('\n=== SUMMARY ===')
   console.log(ok1 ? '✅ 5-node chain: data hopped A->B->C->D->E' : '❌ chain failed')
   console.log(ok2 ? '✅ self-healing: data rerouted around the dead relay' : '❌ self-heal failed')
-  console.log(ok1 && ok2 ? '\n🏟️  Stadium mesh: multi-hop + self-healing both PROVEN.' : '\n(some parts failed)')
+  console.log(
+    ok1 && ok2
+      ? '\n🏟️  Stadium mesh: multi-hop + self-healing both PROVEN.'
+      : '\n(some parts failed)'
+  )
   process.exit(0)
 }
 
-main().catch((e) => { console.error('FAILED:', e.message, e.stack); process.exit(1) })
+main().catch((e) => {
+  console.error('FAILED:', e.message, e.stack)
+  process.exit(1)
+})

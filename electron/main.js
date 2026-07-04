@@ -41,7 +41,10 @@ ipcMain.on('lan-ip', (evt) => {
   const ifaces = os.networkInterfaces()
   for (const addrs of Object.values(ifaces)) {
     for (const a of addrs || []) {
-      if (a.family === 'IPv4' && !a.internal) { ip = a.address; break }
+      if (a.family === 'IPv4' && !a.internal) {
+        ip = a.address
+        break
+      }
     }
     if (ip) break
   }

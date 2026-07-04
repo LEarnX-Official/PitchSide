@@ -38,19 +38,20 @@ so the project spans all three Tether tracks.
 
 ## 2. Key decisions (recommended defaults — override if you want)
 
-| Decision | Recommended default | Why |
-|---|---|---|
-| **Network** | **BSC testnet + test USDT first**, then mainnet after audit | Real USDT with unaudited contracts = high risk of loss. Same code, safe environment to prove it. |
-| **Custody** | **Non-custodial escrow smart contract** | USDT locked in a contract; payouts + the 2%/5% splits enforced on-chain, transparently. No wallet can move funds off-rules. Avoids you holding everyone's money. |
-| **Chain** | BNB Smart Chain (BSC), USDT (BEP-20) | Matches "BSC EVM wallet"; low gas; USDT widely held. |
-| **Wallet** | **WDK (`@tetherto/wdk-wallet-evm`), app-generated local seed** | Self-custodial, lights up the WDK/Wallets track, no external wallet app needed for the demo. |
+| Decision    | Recommended default                                            | Why                                                                                                                                                              |
+| ----------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Network** | **BSC testnet + test USDT first**, then mainnet after audit    | Real USDT with unaudited contracts = high risk of loss. Same code, safe environment to prove it.                                                                 |
+| **Custody** | **Non-custodial escrow smart contract**                        | USDT locked in a contract; payouts + the 2%/5% splits enforced on-chain, transparently. No wallet can move funds off-rules. Avoids you holding everyone's money. |
+| **Chain**   | BNB Smart Chain (BSC), USDT (BEP-20)                           | Matches "BSC EVM wallet"; low gas; USDT widely held.                                                                                                             |
+| **Wallet**  | **WDK (`@tetherto/wdk-wallet-evm`), app-generated local seed** | Self-custodial, lights up the WDK/Wallets track, no external wallet app needed for the demo.                                                                     |
 
 > ⚠️ **Money-handling reality checks** (must acknowledge before mainnet):
+>
 > - "USDT auto-becomes collateral" requires the user to **approve** the token and
 >   **sign** a lock transaction (+ pay gas). There is no silent auto-transfer — no
 >   dApp can move a user's funds without their signature. The UX can be smooth
 >   (one approve + one join tx), but it is always user-signed.
-> - **AI-decides + host-confirms is a trust model**: whoever controls the AI *and*
+> - **AI-decides + host-confirms is a trust model**: whoever controls the AI _and_
 >   the host key can influence outcomes. Mitigations in §6.
 > - Custodying funds, taking cuts, and settling bets may be **regulated** (gambling
 >   / money transmission) depending on jurisdiction. Legal review needed before
@@ -85,8 +86,8 @@ so the project spans all three Tether tracks.
                   P2P feed (bet UX)         BSC chain (the money)
 ```
 
-**Design principle: bet *coordination* is P2P (fast, offline-capable for the UI);
-the *money* is on-chain (the source of truth for stakes and payouts).** The chat
+**Design principle: bet _coordination_ is P2P (fast, offline-capable for the UI);
+the _money_ is on-chain (the source of truth for stakes and payouts).** The chat
 shows a bet card; the actual stake/lock/payout is a contract call. The two are
 linked by an on-chain `betId`.
 
@@ -133,6 +134,7 @@ function cancelBet(uint256 betId);                // if no winner / disputed -> 
 ```
 
 Fee math on payout of `pool`:
+
 ```
 daoCut  = pool * 5%      -> dao
 hostCut = pool * 2%      -> bet.host
@@ -153,7 +155,7 @@ are hard-coded splits executed by the contract on `confirmResult`.
   AI odds guide bettors but don't need to be "trusted" with money.
 - **Outcome** (step 5): the AI proposes the winning outcome. To keep this honest,
   **ground the decision in the real match result from the football API** wherever
-  possible, and have the AI *explain* it. The AI's proposal goes on-chain via
+  possible, and have the AI _explain_ it. The AI's proposal goes on-chain via
   `proposeResult`, then waits for the host.
 - **Host confirm** (step 6): only `bet.host` can call `confirmResult`. This is the
   release gate you specified. Until then, no funds move.
@@ -166,7 +168,7 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
 
 1. **Contract-enforced splits.** 2%/5% and pro-rata payouts are in code, not a
    wallet's discretion. Nobody can change them per-bet.
-2. **Host can only *confirm*, not *redirect*.** `confirmResult` accepts the
+2. **Host can only _confirm_, not _redirect_.** `confirmResult` accepts the
    proposed outcome; the host can't set an arbitrary winner or address.
 3. **Dispute window (recommended addition).** Between `proposeResult` and payout,
    a short timeout lets bettors flag a wrong result → routes to `cancelBet`
@@ -183,6 +185,7 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
 ## 7. UX flow (per user)
 
 **Host**
+
 1. Connect wallet → create room (existing).
 2. In chat: "Create bet" → question, outcomes, close time → signs `createBet` tx.
 3. Bet card appears in chat for everyone (synced P2P, linked to on-chain `betId`).
@@ -190,6 +193,7 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
    `confirmResult`) → contract pays out.
 
 **Bettor (anyone)**
+
 1. Connect wallet → join room (existing).
 2. See a bet card + AI odds → pick an outcome, enter USDT amount.
 3. **Approve USDT** (one-time per allowance) → **Join** (signs `joinBet`, USDT
@@ -200,13 +204,13 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
 
 ## 8. Tech stack additions
 
-| Piece | Choice |
-|---|---|
-| Wallet / chain calls | **WDK `@tetherto/wdk-wallet-evm`** (self-custodial seed, `approve`/`transfer`/`sendTransaction`); ethers `Interface` only to encode escrow calldata |
-| Contract lang / tooling | Solidity ^0.8.24, **Hardhat**, OpenZeppelin v5 (`IERC20`, `SafeERC20`, `ReentrancyGuard`, `Ownable`) |
-| Network | BSC testnet (chainId 97, set via WDK `provider` RPC) → mainnet (56) after audit |
-| USDT | BEP-20 USDT (a `MockUSDT` for tests/testnet first) |
-| Bet metadata transport | existing P2P feed (a new `bet` event kind) |
+| Piece                   | Choice                                                                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wallet / chain calls    | **WDK `@tetherto/wdk-wallet-evm`** (self-custodial seed, `approve`/`transfer`/`sendTransaction`); ethers `Interface` only to encode escrow calldata |
+| Contract lang / tooling | Solidity ^0.8.24, **Hardhat**, OpenZeppelin v5 (`IERC20`, `SafeERC20`, `ReentrancyGuard`, `Ownable`)                                                |
+| Network                 | BSC testnet (chainId 97, set via WDK `provider` RPC) → mainnet (56) after audit                                                                     |
+| USDT                    | BEP-20 USDT (a `MockUSDT` for tests/testnet first)                                                                                                  |
+| Bet metadata transport  | existing P2P feed (a new `bet` event kind)                                                                                                          |
 
 > **WDK USDT note:** WDK's own EVM module warns that USDT requires resetting an
 > existing allowance to 0 before setting a new non-zero one. The bet UI must
@@ -262,6 +266,7 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
 ## 10. Decisions
 
 **Resolved:**
+
 - ✅ **Network:** BSC **testnet** (chainId 97) first, mock USDT — mainnet only after audit.
 - ✅ **Custody:** **non-custodial escrow contract** (`PitchSideBets.sol`).
 - ✅ **Wallet:** **WDK**, app-generated local self-custodial seed (see header note).
@@ -270,6 +275,7 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
   the pool pro-rata by stake); fixed-odds can come later.
 
 **Still open (don't block the contract build):**
+
 - **DAO wallet address** for the 5% cut — set as a constructor arg; use a
   placeholder on testnet, finalize before mainnet.
 - **Dispute window:** included in the contract as an optional timeout between
@@ -280,6 +286,6 @@ Because "AI decides + host confirms" concentrates power, add guardrails:
 
 ---
 
-*Nothing in this document is implemented. It's the plan to review and adjust
+_Nothing in this document is implemented. It's the plan to review and adjust
 before any contract or wallet code is written. Given real money is involved, a
-security audit is required before mainnet.*
+security audit is required before mainnet._

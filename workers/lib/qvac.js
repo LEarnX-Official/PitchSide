@@ -4,24 +4,34 @@
 // desktop: 773MB download + inference). QVAC's llamacpp engine fetches over
 // plain HTTPS, streaming progress.
 
-const { commentaryPrompt, questionPrompt, oddsPrompt, outcomePrompt, DEFAULT_PERSONA } = require('./prompts.js')
+const {
+  commentaryPrompt,
+  questionPrompt,
+  oddsPrompt,
+  outcomePrompt,
+  DEFAULT_PERSONA
+} = require('./prompts.js')
 
 // Extract the first JSON object from a model response that may wrap it in prose
 // or code fences. Returns null if nothing parseable is found.
-function extractJson (text) {
+function extractJson(text) {
   if (!text) return null
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
   const candidate = fenced ? fenced[1] : text
   const start = candidate.indexOf('{')
   const end = candidate.lastIndexOf('}')
   if (start === -1 || end === -1 || end < start) return null
-  try { return JSON.parse(candidate.slice(start, end + 1)) } catch { return null }
+  try {
+    return JSON.parse(candidate.slice(start, end + 1))
+  } catch {
+    return null
+  }
 }
 
 // @qvac/bare-sdk ships NO built-in addons — register the LLM plugin explicitly.
 let sdk = null
 let base = null
-function loadSdk () {
+function loadSdk() {
   if (sdk) return sdk
   let stage = 'require @qvac/bare-sdk'
   try {
@@ -38,9 +48,10 @@ function loadSdk () {
 
 class CommentaryEngine {
   // Direct Hugging Face GGUF (~773MB) over plain HTTPS.
-  static MODEL_URL = 'https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf'
+  static MODEL_URL =
+    'https://huggingface.co/unsloth/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf'
 
-  constructor ({ modelName, persona = DEFAULT_PERSONA, onProgress } = {}) {
+  constructor({ modelName, persona = DEFAULT_PERSONA, onProgress } = {}) {
     this.modelName = modelName
     this.persona = persona
     this.onProgress = onProgress
@@ -49,20 +60,28 @@ class CommentaryEngine {
     this._initP = null
   }
 
-  get isReady () { return this._ready }
+  get isReady() {
+    return this._ready
+  }
 
-  async init () {
+  async init() {
     if (this._ready) return
     if (this._initP) return this._initP
-    this._initP = this._doInit().finally(() => { this._initP = null })
+    this._initP = this._doInit().finally(() => {
+      this._initP = null
+    })
     return this._initP
   }
 
-  async _doInit () {
+  async _doInit() {
     const s = loadSdk()
     const modelSrc = this.modelName || CommentaryEngine.MODEL_URL
     const safeProgress = (p) => {
-      try { if (this.onProgress) this.onProgress(p) } catch { /* never throw — QVAC aborts on a throwing progress cb */ }
+      try {
+        if (this.onProgress) this.onProgress(p)
+      } catch {
+        /* never throw — QVAC aborts on a throwing progress cb */
+      }
     }
     this._modelId = await s.loadModel({
       modelSrc,
@@ -73,18 +92,18 @@ class CommentaryEngine {
     this._ready = true
   }
 
-  async commentate (event, { persona = this.persona } = {}) {
+  async commentate(event, { persona = this.persona } = {}) {
     return this._complete(commentaryPrompt({ persona, event }))
   }
 
-  async answer (question, recentEvents = []) {
+  async answer(question, recentEvents = []) {
     return this._complete(questionPrompt({ question, recentEvents }))
   }
 
   // Estimate implied probabilities for each outcome. Returns a normalized
   // { probabilities:[...], rationale } — informational odds for a pari-mutuel
   // pool. Falls back to a uniform split if the model output isn't parseable.
-  async odds ({ question, outcomes, context = '' }) {
+  async odds({ question, outcomes, context = '' }) {
     const raw = await this._complete(oddsPrompt({ question, outcomes, context }))
     const n = outcomes.length
     const uniform = () => Array(n).fill(1 / n)
@@ -100,15 +119,15 @@ class CommentaryEngine {
 
   // Suggest the winning outcome, grounded in real match data when provided.
   // Returns { outcome:<index>, reason } or { outcome:null } if unparseable.
-  async proposeOutcome ({ question, outcomes, context = '' }) {
+  async proposeOutcome({ question, outcomes, context = '' }) {
     const raw = await this._complete(outcomePrompt({ question, outcomes, context }))
     const parsed = extractJson(raw)
     const idx = parsed && Number.isInteger(parsed.outcome) ? parsed.outcome : null
-    const valid = idx != null && idx >= 0 && idx < outcomes.length
+    const valid = idx !== null && idx >= 0 && idx < outcomes.length
     return { outcome: valid ? idx : null, reason: (parsed && parsed.reason) || '' }
   }
 
-  async _complete (history) {
+  async _complete(history) {
     if (!this._ready) await this.init()
     const s = loadSdk()
     const run = s.completion({ modelId: this._modelId, history, stream: false })
@@ -116,7 +135,7 @@ class CommentaryEngine {
     return result.contentText.trim()
   }
 
-  async dispose () {
+  async dispose() {
     if (!this._ready) return
     const s = loadSdk()
     await s.unloadModel({ modelId: this._modelId })

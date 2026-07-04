@@ -104,8 +104,7 @@ export class Wallet {
     }
     this.deployment = deployment
     this.network =
-      Object.values(NETWORKS).find((n) => n.chainId === deployment.chainId) ||
-      NETWORKS.bscTestnet
+      Object.values(NETWORKS).find((n) => n.chainId === deployment.chainId) || NETWORKS.bscTestnet
     this.rpc = rpc || this.network.rpc
 
     this._manager = null
@@ -149,7 +148,7 @@ export class Wallet {
    */
   async _serialTx(sendFn) {
     const run = this._txChain.then(async () => {
-      if (this._nonce == null) {
+      if (this._nonce === null) {
         this._nonce = await this._readProvider.getTransactionCount(this.address, 'latest')
       }
       const nonce = this._nonce
@@ -193,8 +192,12 @@ export class Wallet {
     }
     // Dig out revert data from the various shapes ethers/WDK produce.
     const data =
-      err?.data?.data || err?.data || err?.info?.error?.data?.data ||
-      err?.info?.error?.data || err?.error?.data || null
+      err?.data?.data ||
+      err?.data ||
+      err?.info?.error?.data?.data ||
+      err?.info?.error?.data ||
+      err?.error?.data ||
+      null
     if (typeof data === 'string' && data.startsWith('0x') && data.length >= 10) {
       try {
         const parsed = this._betsIface.parseError(data)
@@ -202,7 +205,9 @@ export class Wallet {
           const msg = friendly[parsed.name] || parsed.name
           return new Error(msg)
         }
-      } catch { /* not one of our errors */ }
+      } catch {
+        /* not one of our errors */
+      }
     }
     // Fall back to a concise message rather than a giant JSON dump.
     return new Error(err?.shortMessage || err?.reason || err?.message || 'transaction failed')
@@ -246,8 +251,7 @@ export class Wallet {
       throw new Error('gas faucet is local-node only — use a public faucet on testnet')
     }
     // Hardhat account #0 (deterministic dev key; safe on local node only).
-    const HARDHAT_KEY =
-      '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+    const HARDHAT_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
     const funder = new ethers.Wallet(HARDHAT_KEY, this._readProvider)
     const tx = await funder.sendTransaction({
       to: this.address,
@@ -275,7 +279,9 @@ export class Wallet {
         data: erc20.encodeFunctionData('decimals', [])
       })
       decimals = Number(erc20.decodeFunctionResult('decimals', raw)[0])
-    } catch { /* default 6 */ }
+    } catch {
+      /* default 6 */
+    }
     const base = ethers.parseUnits(String(amount), decimals)
     const data = erc20.encodeFunctionData('mint', [this.address, base])
     return this._serialTx((nonce) =>
@@ -322,10 +328,7 @@ export class Wallet {
     const erc20 = new ethers.Interface([
       'function allowance(address owner, address spender) view returns (uint256)'
     ])
-    const data = erc20.encodeFunctionData('allowance', [
-      this.address,
-      this.deployment.bets
-    ])
+    const data = erc20.encodeFunctionData('allowance', [this.address, this.deployment.bets])
     const raw = await this._provider().call({ to: this.deployment.usdt, data })
     return erc20.decodeFunctionResult('allowance', raw)[0]
   }
@@ -350,11 +353,7 @@ export class Wallet {
 
   /** joinBet: assumes USDT is already approved for >= amount. */
   async joinBet({ betId, outcome, amount }) {
-    const data = this._betsIface.encodeFunctionData('joinBet', [
-      BigInt(betId),
-      outcome,
-      amount
-    ])
+    const data = this._betsIface.encodeFunctionData('joinBet', [BigInt(betId), outcome, amount])
     return this._send(data)
   }
 
@@ -370,9 +369,7 @@ export class Wallet {
 
   /** confirmResult: host-only release gate. */
   async confirmResult(betId) {
-    const data = this._betsIface.encodeFunctionData('confirmResult', [
-      BigInt(betId)
-    ])
+    const data = this._betsIface.encodeFunctionData('confirmResult', [BigInt(betId)])
     return this._send(data)
   }
 
@@ -422,10 +419,7 @@ export class Wallet {
   }
 
   async outcomePool(betId, outcome) {
-    const data = this._betsIface.encodeFunctionData('outcomePool', [
-      BigInt(betId),
-      outcome
-    ])
+    const data = this._betsIface.encodeFunctionData('outcomePool', [BigInt(betId), outcome])
     const raw = await this._provider().call({ to: this.deployment.bets, data })
     return this._betsIface.decodeFunctionResult('outcomePool', raw)[0]
   }
@@ -469,12 +463,20 @@ export class Wallet {
         const cards = await this.getAllBets()
         // Cheap change signature: ids + status + pool totals.
         const sig = cards.map((c) => `${c.betId}:${c.status}:${c.totalPool}`).join('|')
-        if (sig !== lastSig) { lastSig = sig; onChange(cards) }
-      } catch { /* transient RPC hiccup; try again next tick */ }
+        if (sig !== lastSig) {
+          lastSig = sig
+          onChange(cards)
+        }
+      } catch {
+        /* transient RPC hiccup; try again next tick */
+      }
       if (!stopped) this._watchTimer = setTimeout(tick, intervalMs)
     }
     tick()
-    return () => { stopped = true; clearTimeout(this._watchTimer) }
+    return () => {
+      stopped = true
+      clearTimeout(this._watchTimer)
+    }
   }
 
   // ---- internals ---------------------------------------------------------

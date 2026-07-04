@@ -16,12 +16,16 @@ test('oddsPrompt lists each outcome with its index and asks for JSON', () => {
 })
 
 test('oddsPrompt includes real-match context when provided', () => {
-  const h = oddsPrompt({ question: 'q?', outcomes: ['a', 'b'], context: 'Arsenal 2-0 up at 70\'' })
+  const h = oddsPrompt({ question: 'q?', outcomes: ['a', 'b'], context: "Arsenal 2-0 up at 70'" })
   assert.ok(h[1].content.includes("Arsenal 2-0 up at 70'"), 'context injected')
 })
 
 test('outcomePrompt tells the model to prefer the real result and return an index', () => {
-  const h = outcomePrompt({ question: 'q?', outcomes: ['Home', 'Draw', 'Away'], context: 'Full time 3-1' })
+  const h = outcomePrompt({
+    question: 'q?',
+    outcomes: ['Home', 'Draw', 'Away'],
+    context: 'Full time 3-1'
+  })
   assert.ok(/real match result/i.test(h[0].content))
   assert.ok(/\"outcome\"/.test(h[0].content), 'asks for {"outcome":...}')
   assert.ok(h[1].content.includes('Full time 3-1'))

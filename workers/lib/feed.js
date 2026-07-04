@@ -3,7 +3,7 @@
 // host writes, guests read. Verified cross-peer sync under Node.
 
 class MatchFeed {
-  constructor (store, roomName, { host = false, crypto, b4a } = {}) {
+  constructor(store, roomName, { host = false, crypto, b4a } = {}) {
     this._events = []
     this._listeners = new Set()
     this._applied = 0
@@ -15,35 +15,43 @@ class MatchFeed {
     this.core = store.get({ keyPair, valueEncoding: 'json' })
   }
 
-  async ready () {
+  async ready() {
     await this.core.ready()
-    this.core.on('append', () => { this._sync().catch(() => {}) })
+    this.core.on('append', () => {
+      this._sync().catch(() => {})
+    })
     await this._sync()
   }
 
-  async append (event) {
+  async append(event) {
     if (!this.isHost) return false
     await this.core.append(event)
     await this._sync()
     return true
   }
 
-  events () { return this._events.slice() }
+  events() {
+    return this._events.slice()
+  }
 
-  onEvent (fn) {
+  onEvent(fn) {
     this._listeners.add(fn)
     return () => this._listeners.delete(fn)
   }
 
-  refresh () { return this.core.update() }
+  refresh() {
+    return this.core.update()
+  }
 
-  _sync () {
+  _sync() {
     if (this._syncing) return this._syncing
-    this._syncing = this._drain().finally(() => { this._syncing = null })
+    this._syncing = this._drain().finally(() => {
+      this._syncing = null
+    })
     return this._syncing
   }
 
-  async _drain () {
+  async _drain() {
     while (this._applied < this.core.length) {
       const i = this._applied
       const event = await this.core.get(i)
@@ -56,13 +64,15 @@ class MatchFeed {
     }
   }
 
-  _emit (event) {
+  _emit(event) {
     for (const fn of this._listeners) {
-      try { fn(event) } catch {}
+      try {
+        fn(event)
+      } catch {}
     }
   }
 
-  async close () {
+  async close() {
     this._listeners.clear()
     await this.core.close()
   }

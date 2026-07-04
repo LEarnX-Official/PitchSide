@@ -31,7 +31,7 @@ class MeshTransport {
    *     onNeighbor(fn)            fn(duplexStream) called for each connected nearby peer
    *     stop()                    stop and close all neighbor links
    */
-  constructor ({ link }) {
+  constructor({ link }) {
     if (!link) throw new Error('MeshTransport requires a `link` layer (radio or test)')
     this._link = link
     this._conns = new Set()
@@ -39,11 +39,17 @@ class MeshTransport {
     this._onPeers = () => {}
   }
 
-  onConnection (fn) { this._onConnection = fn }
-  onPeers (fn) { this._onPeers = fn }
-  connectionCount () { return this._conns.size }
+  onConnection(fn) {
+    this._onConnection = fn
+  }
+  onPeers(fn) {
+    this._onPeers = fn
+  }
+  connectionCount() {
+    return this._conns.size
+  }
 
-  async join (topicName) {
+  async join(topicName) {
     // The link layer emits (stream, initiator) for each nearby-peer connection.
     // `initiator` must differ on the two ends of a link (Hypercore requirement):
     // the dialer is the initiator, the accepter is not.
@@ -61,9 +67,15 @@ class MeshTransport {
     await this._link.start(topicName)
   }
 
-  async destroy () {
-    try { await this._link.stop() } catch {}
-    for (const s of this._conns) { try { s.destroy() } catch {} }
+  async destroy() {
+    try {
+      await this._link.stop()
+    } catch {}
+    for (const s of this._conns) {
+      try {
+        s.destroy()
+      } catch {}
+    }
     this._conns.clear()
   }
 }

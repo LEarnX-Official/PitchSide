@@ -9,8 +9,7 @@ try {
   /* dotenv is optional; tests don't need it */
 }
 
-const TESTNET_RPC =
-  process.env.BSC_TESTNET_RPC || 'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
+const TESTNET_RPC = process.env.BSC_TESTNET_RPC || 'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
 const DEPLOYER_KEY = process.env.DEPLOYER_PRIVATE_KEY
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -18,8 +17,8 @@ module.exports = {
   solidity: {
     version: '0.8.24',
     settings: {
-      optimizer: { enabled: true, runs: 200 },
-    },
+      optimizer: { enabled: true, runs: 200 }
+    }
   },
   networks: {
     hardhat: {},
@@ -30,7 +29,7 @@ module.exports = {
     bscTestnet: {
       url: TESTNET_RPC,
       chainId: 97,
-      accounts: DEPLOYER_KEY ? [DEPLOYER_KEY] : [],
-    },
-  },
+      accounts: DEPLOYER_KEY ? [DEPLOYER_KEY] : []
+    }
+  }
 }

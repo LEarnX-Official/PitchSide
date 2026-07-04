@@ -62,9 +62,10 @@ describe('PitchSideBets', function () {
 
     it('reverts on zero usdt or zero dao', async function () {
       const Bets = await ethers.getContractFactory('PitchSideBets')
-      await expect(
-        Bets.deploy(ethers.ZeroAddress, dao.address)
-      ).to.be.revertedWithCustomError(bets, 'ZeroAddress')
+      await expect(Bets.deploy(ethers.ZeroAddress, dao.address)).to.be.revertedWithCustomError(
+        bets,
+        'ZeroAddress'
+      )
       await expect(
         Bets.deploy(await usdt.getAddress(), ethers.ZeroAddress)
       ).to.be.revertedWithCustomError(bets, 'ZeroAddress')
@@ -76,9 +77,7 @@ describe('PitchSideBets', function () {
   describe('createBet', function () {
     it('opens a bet with the caller as host and increments betCount', async function () {
       const closesAt = await future()
-      await expect(
-        bets.connect(host).createBet('m', 'q?', 2, closesAt)
-      )
+      await expect(bets.connect(host).createBet('m', 'q?', 2, closesAt))
         .to.emit(bets, 'BetCreated')
         .withArgs(0, host.address, 'm', 'q?', 2, closesAt)
 
@@ -90,19 +89,17 @@ describe('PitchSideBets', function () {
     })
 
     it('rejects < 2 outcomes and a close time in the past', async function () {
-      await expect(
-        bets.createBet('m', 'q', 1, await future())
-      ).to.be.revertedWithCustomError(bets, 'BadOutcomeCount')
+      await expect(bets.createBet('m', 'q', 1, await future())).to.be.revertedWithCustomError(
+        bets,
+        'BadOutcomeCount'
+      )
       await expect(
         bets.createBet('m', 'q', 2, (await time.latest()) - 1)
       ).to.be.revertedWithCustomError(bets, 'CloseInPast')
     })
 
     it('getBet reverts for an unknown bet', async function () {
-      await expect(bets.getBet(99)).to.be.revertedWithCustomError(
-        bets,
-        'UnknownBet'
-      )
+      await expect(bets.getBet(99)).to.be.revertedWithCustomError(bets, 'UnknownBet')
     })
   })
 
@@ -138,15 +135,18 @@ describe('PitchSideBets', function () {
     })
 
     it('rejects zero amount, invalid outcome, and unknown bet', async function () {
-      await expect(
-        bets.connect(alice).joinBet(betId, 0, 0)
-      ).to.be.revertedWithCustomError(bets, 'ZeroAmount')
-      await expect(
-        bets.connect(alice).joinBet(betId, 2, U(1))
-      ).to.be.revertedWithCustomError(bets, 'InvalidOutcome')
-      await expect(
-        bets.connect(alice).joinBet(123, 0, U(1))
-      ).to.be.revertedWithCustomError(bets, 'UnknownBet')
+      await expect(bets.connect(alice).joinBet(betId, 0, 0)).to.be.revertedWithCustomError(
+        bets,
+        'ZeroAmount'
+      )
+      await expect(bets.connect(alice).joinBet(betId, 2, U(1))).to.be.revertedWithCustomError(
+        bets,
+        'InvalidOutcome'
+      )
+      await expect(bets.connect(alice).joinBet(123, 0, U(1))).to.be.revertedWithCustomError(
+        bets,
+        'UnknownBet'
+      )
     })
 
     it('rejects joins after close time', async function () {
@@ -154,9 +154,10 @@ describe('PitchSideBets', function () {
       await bets.connect(host).createBet('m', 'q', 2, closesAt)
       const id = 1n
       await time.increaseTo(closesAt)
-      await expect(
-        bets.connect(alice).joinBet(id, 0, U(10))
-      ).to.be.revertedWithCustomError(bets, 'BettingClosed')
+      await expect(bets.connect(alice).joinBet(id, 0, U(10))).to.be.revertedWithCustomError(
+        bets,
+        'BettingClosed'
+      )
     })
   })
 
@@ -182,13 +183,12 @@ describe('PitchSideBets', function () {
     })
 
     it('rejects an out-of-range outcome and a non-open bet', async function () {
-      await expect(
-        bets.proposeResult(betId, 5, 0)
-      ).to.be.revertedWithCustomError(bets, 'InvalidOutcome')
+      await expect(bets.proposeResult(betId, 5, 0)).to.be.revertedWithCustomError(
+        bets,
+        'InvalidOutcome'
+      )
       await bets.proposeResult(betId, 0, 0)
-      await expect(
-        bets.proposeResult(betId, 1, 0)
-      ).to.be.revertedWithCustomError(bets, 'NotOpen')
+      await expect(bets.proposeResult(betId, 1, 0)).to.be.revertedWithCustomError(bets, 'NotOpen')
     })
   })
 
@@ -220,9 +220,7 @@ describe('PitchSideBets', function () {
         .withArgs(betId, 0, daoCut, hostCut, winnersPool)
 
       expect((await usdt.balanceOf(dao.address)) - daoBefore).to.equal(daoCut)
-      expect((await usdt.balanceOf(host.address)) - hostBefore).to.equal(
-        hostCut
-      )
+      expect((await usdt.balanceOf(host.address)) - hostBefore).to.equal(hostCut)
 
       // alice staked 300/400 of winners -> 465 * 3/4 = 348.75
       // carol staked 100/400 of winners -> 465 * 1/4 = 116.25
@@ -233,15 +231,11 @@ describe('PitchSideBets', function () {
       await expect(bets.connect(alice).claim(betId))
         .to.emit(bets, 'WinningsClaimed')
         .withArgs(betId, alice.address, aliceShare)
-      expect((await usdt.balanceOf(alice.address)) - aBefore).to.equal(
-        aliceShare
-      )
+      expect((await usdt.balanceOf(alice.address)) - aBefore).to.equal(aliceShare)
 
       const cBefore = await usdt.balanceOf(carol.address)
       await bets.connect(carol).claim(betId)
-      expect((await usdt.balanceOf(carol.address)) - cBefore).to.equal(
-        carolShare
-      )
+      expect((await usdt.balanceOf(carol.address)) - cBefore).to.equal(carolShare)
 
       // Escrow should hold only rounding dust (here exactly 0).
       expect(await usdt.balanceOf(await bets.getAddress())).to.equal(0n)
@@ -249,27 +243,27 @@ describe('PitchSideBets', function () {
 
     it('only the host can confirm', async function () {
       await bets.proposeResult(betId, 0, 0)
-      await expect(
-        bets.connect(alice).confirmResult(betId)
-      ).to.be.revertedWithCustomError(bets, 'NotHost')
+      await expect(bets.connect(alice).confirmResult(betId)).to.be.revertedWithCustomError(
+        bets,
+        'NotHost'
+      )
     })
 
     it('cannot confirm before the dispute window elapses, can after', async function () {
       await bets.proposeResult(betId, 0, 1000)
-      await expect(
-        bets.connect(host).confirmResult(betId)
-      ).to.be.revertedWithCustomError(bets, 'DisputeWindowActive')
-      await time.increase(1001)
-      await expect(bets.connect(host).confirmResult(betId)).to.emit(
+      await expect(bets.connect(host).confirmResult(betId)).to.be.revertedWithCustomError(
         bets,
-        'BetResolved'
+        'DisputeWindowActive'
       )
+      await time.increase(1001)
+      await expect(bets.connect(host).confirmResult(betId)).to.emit(bets, 'BetResolved')
     })
 
     it('cannot confirm a bet that was never proposed', async function () {
-      await expect(
-        bets.connect(host).confirmResult(betId)
-      ).to.be.revertedWithCustomError(bets, 'NotProposed')
+      await expect(bets.connect(host).confirmResult(betId)).to.be.revertedWithCustomError(
+        bets,
+        'NotProposed'
+      )
     })
 
     it('reverts confirm when nobody staked the winning outcome', async function () {
@@ -279,29 +273,30 @@ describe('PitchSideBets', function () {
       const id = 1n
       await bets.connect(alice).joinBet(id, 0, U(10))
       await bets.proposeResult(id, 2, 0) // nobody staked outcome 2
-      await expect(
-        bets.connect(host).confirmResult(id)
-      ).to.be.revertedWithCustomError(bets, 'CannotCancelNow')
+      await expect(bets.connect(host).confirmResult(id)).to.be.revertedWithCustomError(
+        bets,
+        'CannotCancelNow'
+      )
     })
 
     it('a loser cannot claim, and a winner cannot double-claim', async function () {
       await bets.proposeResult(betId, 0, 0)
       await bets.connect(host).confirmResult(betId)
 
-      await expect(
-        bets.connect(bob).claim(betId)
-      ).to.be.revertedWithCustomError(bets, 'NotWinner')
+      await expect(bets.connect(bob).claim(betId)).to.be.revertedWithCustomError(bets, 'NotWinner')
 
       await bets.connect(alice).claim(betId)
-      await expect(
-        bets.connect(alice).claim(betId)
-      ).to.be.revertedWithCustomError(bets, 'AlreadyWithdrawn')
+      await expect(bets.connect(alice).claim(betId)).to.be.revertedWithCustomError(
+        bets,
+        'AlreadyWithdrawn'
+      )
     })
 
     it('cannot claim before the bet is resolved', async function () {
-      await expect(
-        bets.connect(alice).claim(betId)
-      ).to.be.revertedWithCustomError(bets, 'NotProposed')
+      await expect(bets.connect(alice).claim(betId)).to.be.revertedWithCustomError(
+        bets,
+        'NotProposed'
+      )
     })
   })
 
@@ -333,39 +328,41 @@ describe('PitchSideBets', function () {
 
     it('host can cancel during the dispute window (wrong AI call)', async function () {
       await bets.proposeResult(betId, 0, 1000)
-      await expect(bets.connect(host).cancelBet(betId)).to.emit(
-        bets,
-        'BetCancelled'
-      )
+      await expect(bets.connect(host).cancelBet(betId)).to.emit(bets, 'BetCancelled')
       await bets.connect(bob).refund(betId)
       expect(await bets.withdrawn(betId, bob.address)).to.equal(true)
     })
 
     it('non-host cannot cancel; cannot cancel a resolved bet', async function () {
-      await expect(
-        bets.connect(alice).cancelBet(betId)
-      ).to.be.revertedWithCustomError(bets, 'NotHost')
+      await expect(bets.connect(alice).cancelBet(betId)).to.be.revertedWithCustomError(
+        bets,
+        'NotHost'
+      )
 
       await bets.proposeResult(betId, 1, 0)
       await bets.connect(host).confirmResult(betId)
-      await expect(
-        bets.connect(host).cancelBet(betId)
-      ).to.be.revertedWithCustomError(bets, 'CannotCancelNow')
+      await expect(bets.connect(host).cancelBet(betId)).to.be.revertedWithCustomError(
+        bets,
+        'CannotCancelNow'
+      )
     })
 
     it('refund reverts when bet not cancelled, on double refund, and for non-stakers', async function () {
-      await expect(
-        bets.connect(alice).refund(betId)
-      ).to.be.revertedWithCustomError(bets, 'CannotCancelNow')
+      await expect(bets.connect(alice).refund(betId)).to.be.revertedWithCustomError(
+        bets,
+        'CannotCancelNow'
+      )
 
       await bets.connect(host).cancelBet(betId)
       await bets.connect(alice).refund(betId)
-      await expect(
-        bets.connect(alice).refund(betId)
-      ).to.be.revertedWithCustomError(bets, 'AlreadyWithdrawn')
-      await expect(
-        bets.connect(carol).refund(betId)
-      ).to.be.revertedWithCustomError(bets, 'NothingToClaim')
+      await expect(bets.connect(alice).refund(betId)).to.be.revertedWithCustomError(
+        bets,
+        'AlreadyWithdrawn'
+      )
+      await expect(bets.connect(carol).refund(betId)).to.be.revertedWithCustomError(
+        bets,
+        'NothingToClaim'
+      )
     })
   })
 
@@ -380,9 +377,7 @@ describe('PitchSideBets', function () {
       const evilBets = await Bets.deploy(await rt.getAddress(), dao.address)
 
       await rt.mint(alice.address, U(1000))
-      await rt
-        .connect(alice)
-        .approve(await evilBets.getAddress(), ethers.MaxUint256)
+      await rt.connect(alice).approve(await evilBets.getAddress(), ethers.MaxUint256)
 
       await evilBets.connect(host).createBet('m', 'q', 2, await future())
       const id = 0n

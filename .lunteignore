@@ -1,0 +1,6 @@
+# Generated / vendored — not hand-written, don't lint.
+renderer/wallet.bundle.js
+renderer/contract/*.abi.js
+node_modules
+contracts
+out
