@@ -1,0 +1,36 @@
+node_modules/
+test/.test-tmp/
+.mesh-store-*/
+.chain-store-*/
+.rmesh-*/
+.reg-*/
+.ft-*/
+pear-runtime/
+
+# Generated wallet bundle (built by npm run build:wallet)
+renderer/wallet.bundle.js
+
+# --- contracts (Hardhat) ---
+contracts/node_modules/
+contracts/artifacts/
+contracts/cache/
+contracts/coverage/
+contracts/coverage.json
+contracts/typechain-types/
+contracts/.env
+contracts/deployments/
+
+# --- app secrets / ephemeral ---
+.env
+.tmp/
+.disc/
+.rf/
+.faucet-test/
+
+# NOTE: renderer/contract/deployment.js IS tracked (a null placeholder the app
+# imports). deploy.js overwrites it locally with real addresses — don't commit
+# that change:  git update-index --skip-worktree renderer/contract/deployment.js
+
+# --- OS / editor noise ---
+.DS_Store
+*.log

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PitchSide — offline P2P AI watch-party</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section id="lobby" class="lobby">
+    <div class="lobby-card">
+      <h1>pitchside</h1>
+      <p class="tagline">offline · peer-to-peer · on-device AI watch-party</p>
+
+      <!-- Guests: paste a join code to auto-fill room + mode + host address. -->
+      <label>Have a join code?
+        <div class="code-row">
+          <input id="joinCode" placeholder="paste code (PS1-…)" />
+          <button id="applyCode" type="button" class="evt">Use</button>
+        </div>
+      </label>
+
+      <label>Nickname <input id="nickname" placeholder="e.g. Sam" /></label>
+      <label>Room <input id="roomName" value="worldcup-final" /></label>
+      <label>Commentator
+        <select id="persona">
+          <option value="hype">Hype man 🔥</option>
+          <option value="analyst">Tactical analyst 🧠</option>
+          <option value="banter">Banter pundit 😏</option>
+        </select>
+      </label>
+      <label class="checkbox">
+        <input id="isHost" type="checkbox" checked />
+        Host this room (post match events &amp; drive commentary)
+      </label>
+
+      <label>Connect over
+        <select id="mode">
+          <option value="internet">🌐 Internet P2P — join from anywhere</option>
+          <option value="local">📶 Local network — offline, same WiFi</option>
+        </select>
+      </label>
+
+      <!-- Only shown for a GUEST joining a LOCAL network: the host's address. -->
+      <label id="bootstrapRow" class="hidden">Host's local address
+        <input id="bootstrap" placeholder="e.g. 192.168.1.20:49737" />
+      </label>
+
+      <button id="joinBtn" class="primary">Join watch-party</button>
+      <!-- Shown to a LOCAL host after joining, so they can share it with guests. -->
+      <p id="localAddrHint" class="hint hidden"></p>
+      <p class="hint">No account, no server. Internet mode uses P2P; Local mode is fully offline on one network.</p>
+      <p id="fatal" class="fatal"></p>
+    </div>
+  </section>
+
+  <section id="stage" class="stage hidden">
+    <header class="topbar">
+      <button id="exitBtn" class="exit-btn" title="Leave the watch-party">‹ exit</button>
+      <span class="brand">PitchSide</span>
+      <span id="roomLabel" class="room-label"></span>
+      <span id="peerCount" class="peer-count">0 peers</span>
+      <span id="aiStatus" class="status offline">● AI offline</span>
+    </header>
+
+    <!-- Share bar: shows the join code guests can use to join this room. -->
+    <div id="shareBar" class="share-bar hidden">
+      <span>Invite code:</span>
+      <code id="shareCode"></code>
+      <button id="copyCode" class="evt">Copy</button>
+      <span id="copyMsg" class="hint"></span>
+    </div>
+
+    <main class="grid">
+      <div class="col feed-col">
+        <div id="feed" class="feed"></div>
+
+        <!-- OPTIONAL live real-match data (host only, needs internet + API key). -->
+        <details id="livePanel" class="live-panel">
+          <summary>📡 Live real matches (optional)</summary>
+          <div class="live-body">
+            <div class="live-row">
+              <input id="apiKey" placeholder="football-data.org API key" class="custom" />
+              <button id="liveFetch" class="evt">Load today</button>
+            </div>
+            <select id="liveMatches" class="live-select"><option value="">— today's matches —</option></select>
+            <div class="live-row">
+              <button id="liveFollow" class="evt" disabled>▶ Follow (auto-post goals)</button>
+              <button id="liveStop" class="evt hidden">■ Stop following</button>
+            </div>
+            <p id="liveStatus" class="hint"></p>
+          </div>
+        </details>
+
+        <div class="controls">
+          <input id="minuteInput" type="number" min="0" max="130" placeholder="min" class="minute" />
+          <button id="evtGoal" class="evt">⚽ Goal</button>
+          <button id="evtCard" class="evt">🟨 Card</button>
+          <button id="evtKick" class="evt">▶ Kick-off</button>
+          <input id="customEvent" placeholder="custom event…" class="custom" />
+          <button id="evtCustom" class="evt">Post</button>
+        </div>
+        <div class="reactions">
+          <button id="reactHype">🔥</button>
+          <button id="reactShock">😱</button>
+        </div>
+      </div>
+
+      <div class="col chat-col">
+        <h3>Fan chat</h3>
+        <div id="chatList" class="chat-list"></div>
+        <div class="chat-input-row">
+          <input id="chatInput" placeholder="Say something…" />
+          <button id="chatSend">Send</button>
+        </div>
+      </div>
+
+      <div class="col ai-col">
+        <!-- On-chain betting (WDK / Wallets track). Online-only; hidden in local/offline mode. -->
+        <details id="bettingPanel" class="live-panel" open>
+          <summary>🎲 Match betting (USDT · WDK)</summary>
+          <div id="bettingBody" class="live-body"></div>
+        </details>
+
+        <h3>Ask the AI 🎙</h3>
+        <div id="aiAnswer" class="ai-answer">
+          On-device AI commentary is optional. Download the model once to run a private,
+          offline football commentator + Q&amp;A on this machine.
+        </div>
+        <div id="aiDownloadRow" class="ai-download-row">
+          <button id="aiDownload" class="ai-download-btn">⬇ download on-device AI model (~773MB)</button>
+          <div id="aiProgressTrack" class="progress-track hidden"><div id="aiProgressFill" class="progress-fill"></div></div>
+        </div>
+        <div class="ai-input-row">
+          <input id="aiInput" placeholder="download the model to ask" disabled />
+          <button id="aiAsk" disabled>Ask</button>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
