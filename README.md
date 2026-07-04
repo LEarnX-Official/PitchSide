@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏟️ PitchSide
+<img src="assets/logo.svg" alt="PitchSide" width="620" />
 
 ### The offline, peer-to-peer, on-device-AI football watch-party — with on-chain USDT betting.
 
