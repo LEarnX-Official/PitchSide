@@ -5,6 +5,15 @@
 const { MatchFeed } = require('./feed.js')
 const { SwarmTransport } = require('./transport.js')
 const { DirectTransport } = require('./direct-transport.js')
+const c = require('compact-encoding')
+
+// Guests can't write to the single-writer feed, so their chat is relayed to the
+// host over a small protomux channel multiplexed on the SAME connection that
+// carries Hypercore replication. The host appends it to the feed on their
+// behalf (tagged with the guest's nickname). This keeps the proven single-writer
+// data model while letting everyone chat — in both internet and offline modes.
+const CHAT_RELAY_PROTOCOL = 'pitchside/chat-relay'
+const chatRelayEncoding = c.json // { nickname, text }
 
 class Room {
   // Transport is chosen by `mode`:
@@ -47,6 +56,8 @@ class Room {
     this._refreshTimer = null
     this._peerCount = 0
     this._peerListeners = new Set()
+    // Guest-side: chat-relay senders to the host (one per connection).
+    this._relaySenders = new Set()
   }
 
   // After open(), if hosting a local network, this is the address guests need.
@@ -63,14 +74,19 @@ class Room {
     //   - Mesh/raw yields { initiator, stream } -> create the protocol stream and
     //     pipe it through the raw neighbor stream.
     this.transport.onConnection((conn) => {
+      let stream
       if (conn && typeof conn === 'object' && 'initiator' in conn && conn.stream) {
         const proto = this.store.replicate(conn.initiator)
         proto.on('error', () => {})
         conn.stream.on('error', () => {})
         proto.pipe(conn.stream).pipe(proto)
+        stream = proto
       } else {
-        this.store.replicate(conn) // ready-to-replicate stream (Hyperswarm)
+        stream = this.store.replicate(conn) // ready-to-replicate stream (Hyperswarm)
       }
+      // Multiplex a chat-relay channel on the SAME connection's muxer, so guest
+      // chat reaches the host without disturbing Hypercore replication.
+      this._setupChatRelay(stream)
     })
     if (this.transport.onPeers) this.transport.onPeers((n) => this._setPeers(n))
 
@@ -85,6 +101,38 @@ class Room {
     this._refreshTimer = setInterval(() => this.feed.refresh().catch(() => {}), 1500)
   }
 
+  // Open the chat-relay channel on a connection's shared protomux.
+  //   - Host: receives {nickname,text} and appends it to the feed for everyone.
+  //   - Guest: keeps the message handle so postChat can send to the host.
+  _setupChatRelay(stream) {
+    const mux = stream && stream.noiseStream && stream.noiseStream.userData
+    if (!mux || typeof mux.createChannel !== 'function') return
+    const channel = mux.createChannel({ protocol: CHAT_RELAY_PROTOCOL })
+    if (!channel) return
+
+    let sender = null
+    const message = channel.addMessage({
+      encoding: chatRelayEncoding,
+      onmessage: (payload) => {
+        // Only the host acts on relayed chat — it writes it to the feed.
+        if (!this.isHost || !payload) return
+        const text = String(payload.text || '')
+          .slice(0, 500)
+          .trim()
+        if (!text) return
+        const author = String(payload.nickname || 'guest').slice(0, 40)
+        this.feed.append({ kind: 'chat', author, at: Date.now(), data: { text } }).catch(() => {})
+      }
+    })
+    sender = message
+
+    channel.onclose = () => this._relaySenders.delete(sender)
+    channel.open()
+
+    // Guests remember the sender to relay their chat to the host.
+    if (!this.isHost) this._relaySenders.add(sender)
+  }
+
   postMatchEvent({ type, minute, text }) {
     return this.feed.append({
       kind: 'match',
@@ -94,7 +142,29 @@ class Room {
     })
   }
   postChat(text) {
-    return this.feed.append({ kind: 'chat', author: this.nickname, at: Date.now(), data: { text } })
+    const clean = String(text || '').trim()
+    if (!clean) return false
+    if (this.isHost) {
+      // Host writes directly to the feed.
+      return this.feed.append({
+        kind: 'chat',
+        author: this.nickname,
+        at: Date.now(),
+        data: { text: clean }
+      })
+    }
+    // Guest: relay to the host over every open chat-relay channel (normally one:
+    // the host). The host appends it to the feed, which syncs back to everyone.
+    let sent = false
+    for (const sender of this._relaySenders) {
+      try {
+        sender.send({ nickname: this.nickname, text: clean })
+        sent = true
+      } catch {
+        /* channel closing; ignore */
+      }
+    }
+    return sent
   }
   postReaction(emoji) {
     return this.feed.append({
@@ -157,6 +227,7 @@ class Room {
 
   async close() {
     this._peerListeners.clear()
+    this._relaySenders.clear()
     if (this._refreshTimer) clearInterval(this._refreshTimer)
     if (this.transport) await this.transport.destroy()
     await this.feed.close()

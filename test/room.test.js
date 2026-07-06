@@ -8,8 +8,35 @@ const crypto = require('hypercore-crypto')
 const b4a = require('b4a')
 const { Room } = require('../workers/lib/room.js')
 const { SwarmTransport } = require('../workers/lib/transport.js')
+const { PassThrough, Duplex } = require('stream')
 
 const tmp = () => __dirname + '/.test-tmp/' + Math.random().toString(16).slice(2)
+
+// A transport pair over an in-process duplex, so REAL Hypercore replication and
+// the chat-relay muxer run (fake transports don't replicate).
+function duplexPair() {
+  const a = new PassThrough()
+  const b = new PassThrough()
+  return [Duplex.from({ readable: a, writable: b }), Duplex.from({ readable: b, writable: a })]
+}
+function streamTransport(stream, initiator) {
+  return {
+    _fn: () => {},
+    onConnection(fn) {
+      this._fn = fn
+    },
+    onPeers() {},
+    async join() {
+      this._fn({ initiator, stream })
+    },
+    async destroy() {
+      try {
+        stream.destroy()
+      } catch {}
+    }
+  }
+}
+const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 test('Room defaults to SwarmTransport when none is injected', () => {
   const room = new Room({
@@ -162,6 +189,59 @@ test('host bet-hide emits a bet-hide tombstone keyed by betId', async () => {
   assert.strictEqual(hide.data.betId, 7, 'tombstone carries the betId')
 
   await host.close()
+})
+
+test('guest chat is relayed to the host and syncs to every peer', async () => {
+  const [sHost, sGuest] = duplexPair()
+  const host = new Room({
+    name: 'r',
+    nickname: 'HOST',
+    host: true,
+    Corestore,
+    crypto,
+    b4a,
+    storageDir: tmp(),
+    transport: streamTransport(sHost, false)
+  })
+  const guest = new Room({
+    name: 'r',
+    nickname: 'sam',
+    host: false,
+    Corestore,
+    crypto,
+    b4a,
+    storageDir: tmp(),
+    transport: streamTransport(sGuest, true)
+  })
+
+  const hostChats = []
+  const guestChats = []
+  host.onEvent((e) => {
+    if (e.kind === 'chat') hostChats.push(`${e.author}: ${e.data.text}`)
+  })
+  guest.onEvent((e) => {
+    if (e.kind === 'chat') guestChats.push(`${e.author}: ${e.data.text}`)
+  })
+
+  await host.open()
+  await guest.open()
+  await wait(400) // let the relay channel open + initial replication
+
+  await host.postChat('welcome')
+  const relayed = await guest.postChat('hi from guest')
+  assert.strictEqual(relayed, true, 'guest postChat reports it relayed')
+
+  await wait(600) // relay + replication settle
+
+  // The guest's message reached the host's feed (host appended it) ...
+  assert.ok(hostChats.includes('sam: hi from guest'), 'guest chat reached host feed')
+  // ... and synced back to the guest's own feed ...
+  assert.ok(guestChats.includes('sam: hi from guest'), 'guest chat synced back to guest')
+  // ... and the host's own chat reached the guest.
+  assert.ok(guestChats.includes('HOST: welcome'), 'host chat reached guest feed')
+
+  await host.close()
+  await guest.close()
 })
 
 test('peer count callback fires through the transport', async () => {

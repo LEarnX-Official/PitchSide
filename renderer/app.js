@@ -290,18 +290,21 @@ function start() {
     toWorker({ cmd: 'ask', question })
   })
 
+  // Chat is for EVERYONE. The host writes to the feed directly; a guest's chat is
+  // relayed to the host over the P2P connection, and the host appends it on their
+  // behalf (see Room.postChat). Same command from the renderer either way.
+  chatView.onSend((text) => toWorker({ cmd: 'chat', text }))
+
   if (isHost) {
-    chatView.onSend((text) => toWorker({ cmd: 'chat', text }))
     $('reactHype').addEventListener('click', () => toWorker({ cmd: 'react', emoji: '🔥' }))
     $('reactShock').addEventListener('click', () => toWorker({ cmd: 'react', emoji: '😱' }))
     bindMatchButtons()
     setupLiveData()
   } else {
-    // Guests can't post events, so the live-data panel + controls are host-only.
+    // Guests can chat, but posting MATCH events / reactions / live-data stays
+    // host-only (the feed is single-writer; only chat is relayed).
     $('livePanel')?.remove()
     for (const id of [
-      'chatInput',
-      'chatSend',
       'reactHype',
       'reactShock',
       'evtGoal',
